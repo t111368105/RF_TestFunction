@@ -6,7 +6,7 @@ const media = matchMedia('(prefers-color-scheme: dark)');
 
 function applyTheme() {
   const choice = $('theme').value;
-  document.body.dataset.theme = choice === 'system' ? (media.matches ? 'dark' : 'light') : choice;
+  document.documentElement.dataset.theme = choice === 'system' ? (media.matches ? 'dark' : 'light') : choice;
 }
 
 export function initPrefs() {

@@ -7,6 +7,12 @@ export function reportHtml(p, assumptions) {
   const r = budget(p.values);
   const n = noise(p.values, number(p.bandwidth), number(p.noiseFigure), number(p.requiredSNR));
   const noiseValue = (key) => (n ? fmt(n[key]) : 'Invalid input');
+  const measured = p.measured.trim();
+  const measuredDelta = !measured
+    ? 'Not provided'
+    : Number.isFinite(number(measured))
+      ? fmt(number(measured) - r.output)
+      : 'Invalid value';
 
   const inputs = table(
     ['Parameter', 'Value'],
@@ -36,8 +42,8 @@ export function reportHtml(p, assumptions) {
       ['Input-referred noise (dBm)', noiseValue('floor')],
       ['Estimated SNR (dB)', noiseValue('snr')],
       ['SNR margin (dB)', noiseValue('margin')],
-      ['Measured receiver input (dBm)', p.measured || 'Not provided'],
-      ['Measured − predicted (dB)', p.measured ? fmt(number(p.measured) - r.output) : 'Not provided'],
+      ['Measured receiver input (dBm)', measured || 'Not provided'],
+      ['Measured − predicted (dB)', measuredDelta],
     ],
   );
 

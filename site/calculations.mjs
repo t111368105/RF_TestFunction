@@ -31,9 +31,14 @@ export function invalidIndex(values) {
   );
 }
 
-/** Strict decimal parser; accepts a comma as decimal separator. Returns NaN when invalid. */
+// Commas that group digits in threes ("1,000", "-1,234,567.5") are thousands separators, matching
+// how the page itself formats numbers; any other comma ("2,4") is a decimal separator.
+const GROUPED = /^[+-]?\d{1,3}(?:,\d{3})+(?:\.\d*)?(?:e[+-]?\d+)?$/i;
+
+/** Strict decimal parser. Returns NaN when invalid. */
 export function number(x) {
-  const s = String(x).trim().replaceAll(',', '.');
+  const raw = String(x).trim();
+  const s = GROUPED.test(raw) ? raw.replaceAll(',', '') : raw.replaceAll(',', '.');
   const valid = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(s) && Number.isFinite(Number(s));
   return valid ? Number(s) : NaN;
 }

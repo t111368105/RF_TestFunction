@@ -13,6 +13,12 @@ export function fmt(x, digits = 2) {
   return x.toLocaleString('en-US', { maximumFractionDigits: digits });
 }
 
+/** Random id; randomUUID only exists in secure contexts (https or localhost), not plain-http LAN hosts. */
+export function newId() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 let noticeTimer;
 export function notice(message) {
   $('notice').textContent = message;

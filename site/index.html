@@ -7,6 +7,19 @@
     <title>RF TestFunction · LAB602</title>
     <link rel="icon" href="./logo.png">
     <link rel="stylesheet" href="./style.css">
+    <script>
+      // Apply the saved theme before first paint to avoid a light flash; prefs.mjs keeps it updated.
+      (() => {
+        let theme;
+        try {
+          theme = JSON.parse(localStorage.getItem('rf.prefs'))?.theme;
+        } catch {}
+        if (theme !== 'light' && theme !== 'dark') {
+          theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
     <script type="module" src="./app.mjs"></script>
   </head>
   <body>

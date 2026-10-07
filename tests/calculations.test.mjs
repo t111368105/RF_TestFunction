@@ -78,6 +78,14 @@ test('Strict parser and saved plan round trip', () => {
   close(number(' 2,4 '), 2.4);
   close(number('1e-3'), 0.001);
 
+  // Thousands separators, as the page itself formats numbers.
+  for (const [s, v] of [['1,000', 1000], ['-1,234,567.5', -1234567.5], ['2,400', 2400], ['1,000e3', 1e6]]) {
+    close(number(s), v);
+  }
+  // Any other comma is a decimal separator.
+  for (const [s, v] of [['1,00', 1], ['12,3456', 12.3456], ['-0,5', -0.5]]) close(number(s), v);
+  for (const s of ['1,000,5', '1,0,0', ',']) assert.ok(Number.isNaN(number(s)));
+
   const p = { id: 'test', date: new Date().toISOString(), name: 'Test', notes: 'Notes', values: base };
   assert.ok(validPlan(JSON.parse(JSON.stringify(p))));
   assert.equal(validPlan({ ...p, values: [] }), false);

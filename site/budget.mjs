@@ -1,7 +1,7 @@
 // Link Budget page: input form, results, distance/noise/measurement analysis, save and print.
 
 import { labels, number, invalidIndex, budget, powerAt, noise } from './calculations.mjs';
-import { $, esc, fmt, notice, read, write, field, table, bindUnit } from './ui.mjs';
+import { $, esc, fmt, notice, read, write, field, table, bindUnit, newId } from './ui.mjs';
 import { distanceChart } from './chart.mjs';
 import { reportHtml } from './report.mjs';
 
@@ -71,6 +71,19 @@ function invalidate() {
   persist();
 }
 
+/** Explains why input i is invalid, in the unit the user selected. */
+function fieldError(i) {
+  const unitSelect = { 0: 'frequency-unit', 1: 'distance-unit' }[i];
+  const unit = unitSelect ? $(unitSelect).selectedOptions[0].textContent : units[i];
+  const name = `${names[i]} (${unit})`;
+  const raw = $('v' + i).value.trim();
+  if (raw === '') return `Enter ${name}.`;
+  if (!Number.isFinite(number(raw))) return `${name} must be a number, e.g. ${placeholders[i]}.`;
+  if (!Number.isFinite(values()[i])) return `${name} is too large.`;
+  if (i < 2) return `${name} must be greater than 0.`;
+  return `${name} cannot be negative.`;
+}
+
 function calculate(e) {
   e.preventDefault();
   try {
@@ -78,7 +91,7 @@ function calculate(e) {
     budget(v);
     snapshot = {
       ...(loaded ?? {}),
-      id: crypto.randomUUID(),
+      id: newId(),
       date: new Date().toISOString(),
       values: v,
       name: loaded?.name ?? '',
@@ -97,8 +110,8 @@ function calculate(e) {
     }
     if ($('haptics').checked && navigator.vibrate) navigator.vibrate(30);
   } catch (err) {
-    $('error').textContent = err.message;
     const i = invalidIndex(values());
+    $('error').textContent = i >= 0 ? fieldError(i) : err.message;
     if (i >= 0) {
       const el = $('v' + i);
       const detail = el.closest('details');
@@ -235,7 +248,7 @@ function save(addPlan) {
   if (!snapshot) return;
   syncMeta();
   const p = structuredClone(snapshot);
-  p.id = crypto.randomUUID();
+  p.id = newId();
   p.name = p.name.trim() || 'Untitled link';
   if (addPlan(p)) notice(`Saved "${p.name}"`);
 }
