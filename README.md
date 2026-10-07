@@ -34,25 +34,31 @@ RFLinkBudget SwiftUI 專案的繁體中文網頁版，採原生 HTML/CSS/JavaScr
 
 ## GitHub Pages
 
-目前使用分支發布，不需要額外的 workflow token 權限。
+由 GitHub Actions 自動測試與發布（`.github/workflows/pages.yml`）：
+
+- 每次 push 和 pull request 都會執行計算測試與所有模組的語法檢查。
+- 只有 push 到 `main`（或在 Actions 頁手動執行）且測試通過時，才會把 `site/` 發布到 Pages；測試失敗時網站維持上一版。
+
+首次設定：
 
 1. 若使用 GitHub Free，repository 必須為 Public 才能啟用 Pages；私人 repository 需支援 Pages 的付費方案。
-2. Settings → Pages → Source 選擇 Deploy from a branch。
-3. Branch 選擇 `gh-pages`，目錄選擇 `/ (root)`，按 Save。
-4. 發布成功網址以 Pages 頁面為準，預期為 https://t111368105.github.io/RF_TestFunction/ 。
+2. Settings → Pages → Build and deployment → Source 選擇 **GitHub Actions**。
+3. 發布成功網址以 Pages 頁面為準，預期為 https://t111368105.github.io/RF_TestFunction/ 。
 
-更新後先驗證，再發布：
+日常更新只需 push 到 `main`，可在 repository 的 Actions 頁查看測試與發布結果：
+
+```sh
+git push origin main
+```
+
+推送前也可在本機先跑相同的檢查：
 
 ```sh
 node --test tests/*.test.mjs
 for f in site/*.mjs; do node --check "$f"; done
-git add .
-git commit -m "Update RF tools"
-git push origin main
-git subtree push --prefix site origin gh-pages
 ```
 
-`main` 保存原始碼與測試，`gh-pages` 只包含網站檔案。`deployment/pages-workflow.example.yml` 是選用的 Actions 工作流程範例，目前不會自動執行。
+改用 Actions 後不再需要 `gh-pages` 分支，確認新網站正常後可自行刪除。
 
 ## 資料與限制
 
