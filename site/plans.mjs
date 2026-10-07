@@ -1,6 +1,6 @@
 // Saved Plans page: list, delete and two-plan comparison. Plans live in localStorage.
 
-import { labels, budget, validPlan } from './calculations.mjs';
+import { labels, budget, validPlan, upgradePlan } from './calculations.mjs';
 import { $, esc, fmt, notice, read, write, table } from './ui.mjs';
 
 let plans = [];
@@ -80,7 +80,7 @@ function onSelect(e) {
 /** onOpen(plan, analyze) is called for "Load Parameters" (false) and "Analyze / Export" (true). */
 export function initPlans({ onOpen }) {
   const saved = read('rf.plans', []);
-  plans = Array.isArray(saved) ? saved.filter(validPlan) : [];
+  plans = Array.isArray(saved) ? saved.map(upgradePlan).filter(validPlan) : [];
 
   $('plan-list').onchange = onSelect;
   $('plan-list').onclick = (e) => {

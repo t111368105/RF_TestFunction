@@ -4,10 +4,13 @@ RFLinkBudget SwiftUI 專案的繁體中文網頁版，採原生 HTML/CSS/JavaScr
 
 ## 功能
 
-- FSPL、接收功率、鏈路餘裕、七階段功率分析。
+- FSPL、接收功率、鏈路餘裕、八階段功率分析，可輸入極化、指向、大氣等其他路徑損耗。
+- 近場檢查：距離小於 10 個波長時標示警告，圖表以陰影標出近場區。
 - MHz/GHz、m/km 自動換算、輸入保留、清除及復原。
-- 對數距離圖表、距離檢視滑桿、最大距離。
-- 290 K 總系統 NF 雜訊分析、SNR 與實測差異。
+- 對數距離圖表：標示鏈路距離與最大距離，距離檢視滑桿的位置會在曲線上以游標點顯示。
+- 資料速率：由 C/N₀ 計算 Eb/N₀、Eb/N₀ 餘裕（含實作損耗）及可支援的最大資料速率。
+- 290 K 總系統 NF 雜訊分析（可直接輸入，或由 RX 線損、放大器與接收機 NF 以 Friis 公式計算）、SNR。
+- 多點實測：輸入或從試算表貼上「距離、實測功率」，逐點比較預測值，並以最小平方法擬合對數距離路徑損耗模型（指數 n、遮蔽 σ、R²、擬合最大距離），結果畫在圖表與報告中。
 - 本機方案儲存、載入、分析、刪除及雙方案比較。
 - 可列印的完整報告：按「PDF 報告／列印」，於瀏覽器列印視窗儲存為 PDF。
 - 雙向 dBm/W、單程一階 Doppler、頻率及徑向速度單位換算。
@@ -22,6 +25,7 @@ RFLinkBudget SwiftUI 專案的繁體中文網頁版，採原生 HTML/CSS/JavaScr
 | `site/budget.mjs` | Link Budget 頁：輸入表單、結果、距離／雜訊／實測分析、儲存與列印 |
 | `site/chart.mjs` | 接收功率對距離的 SVG 圖表 |
 | `site/report.mjs` | 列印／PDF 報告內容 |
+| `site/measurements.mjs` | 多點實測表格、與預測的差值、路徑損耗指數擬合 |
 | `site/plans.mjs` | Saved Plans 頁：方案清單、刪除、雙方案比較 |
 | `site/tools.mjs` | Power Converter 與 Doppler Shift 頁 |
 | `site/prefs.mjs` | 外觀、動畫與觸覺回饋偏好 |
@@ -29,8 +33,15 @@ RFLinkBudget SwiftUI 專案的繁體中文網頁版，採原生 HTML/CSS/JavaScr
 
 ## 本機預覽
 
-在專案目錄執行 `python3 -m http.server 8080 --directory site`，開啟 http://localhost:8080 。
-不要直接以 file:// 開啟：ES modules 需要 HTTP。
+在專案目錄執行：
+
+```sh
+python tools/serve.py          # 只有這台電腦：http://localhost:8080
+python tools/serve.py --lan    # 同網路的手機也能開，網址會印在終端機
+```
+
+這個伺服器會停用快取。不要用 `python -m http.server`：瀏覽器（特別是 iOS Safari）可能把新舊版本的 JS 模組混在一起使用，造成頁面無法啟動、輸入欄位消失。
+不要直接以 file:// 開啟：ES modules 需要 HTTP。手機連不到時，確認 Windows 防火牆允許 Python 存取「私人網路」。
 
 ## GitHub Pages
 

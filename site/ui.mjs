@@ -19,6 +19,12 @@ export function newId() {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/** Formats a bit rate with the largest fitting unit. */
+export function fmtRate(bps) {
+  const [scale, unit] = bps >= 1e6 ? [1e6, 'Mbit/s'] : bps >= 1e3 ? [1e3, 'kbit/s'] : [1, 'bit/s'];
+  return `${fmt(bps / scale, 4)} ${unit}`;
+}
+
 let noticeTimer;
 export function notice(message) {
   $('notice').textContent = message;
@@ -45,12 +51,43 @@ export function write(key, value) {
   }
 }
 
-export function field(id, title, value, unit = '', extra = '') {
+/** signed adds a ± button for values that can be negative (see signButton). */
+export function field(id, title, value, unit = '', extra = '', signed = false) {
   const suffix = unit ? `<span>${unit}</span>` : '';
   return (
     `<label for="${id}">${title}<div class="input-unit">` +
-    `<input id="${id}" inputmode="decimal" value="${esc(value)}" ${extra}>${suffix}</div></label>`
+    `<input id="${id}" inputmode="decimal" value="${esc(value)}" ${extra}>${signed ? signButton(id) : ''}${suffix}</div></label>`
   );
+}
+
+/**
+ * Touch decimal keypads (notably iOS) have no minus key, so fields that can be negative get a ±
+ * button. It is only shown for coarse pointers; see .sign in style.css.
+ */
+export function signButton(id, label = 'Toggle minus sign') {
+  return `<button type="button" class="sign" data-sign-for="${id}" aria-label="${label}">±</button>`;
+}
+
+function toggleSign(input) {
+  const v = input.value.trim();
+  input.value = v.startsWith('-') ? v.slice(1) : '-' + v.replace(/^\+/, '');
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+/** Handles every ± button on the page, including ones rendered later. */
+export function initSignButtons() {
+  // Keep focus (and the on-screen keyboard) on the field while the button is pressed.
+  document.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('[data-sign-for]')) e.preventDefault();
+  });
+  document.addEventListener('click', (e) => {
+    const button = e.target.closest('[data-sign-for]');
+    if (!button) return;
+    const input = button.dataset.signFor
+      ? document.getElementById(button.dataset.signFor)
+      : button.parentElement.querySelector('input');
+    if (input) toggleSign(input);
+  });
 }
 
 export function table(head, rows) {

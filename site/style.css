@@ -11,6 +11,7 @@
   --field: #f7f9fc;
   --orange: #b76305;
   --green: #168249;
+  --violet: #7b3fc4;
 }
 
 * {
@@ -36,6 +37,7 @@ body {
   --field: #101c30;
   --orange: #ffbc60;
   --green: #64d89d;
+  --violet: #c39bff;
 }
 
 /* ---------- Header and navigation ---------- */
@@ -198,6 +200,10 @@ label {
   margin-bottom: 14px;
 }
 
+.fields .span {
+  grid-column: 1 / -1;
+}
+
 label:has(input[type=checkbox]) {
   display: flex;
   gap: 8px;
@@ -249,6 +255,22 @@ input[type=range] {
 .input-unit select {
   width: 90px;
   flex-shrink: 0;
+}
+
+.input-unit .sign {
+  display: none;
+  flex-shrink: 0;
+  min-width: 44px;
+  padding: 0;
+  margin-top: 6px;
+  font-size: 18px;
+}
+
+/* Touch keypads may lack a minus key; mouse and keyboard users type "-" directly. */
+@media (pointer: coarse) {
+  .input-unit .sign {
+    display: block;
+  }
 }
 
 .input-unit span {
@@ -413,6 +435,31 @@ button:disabled {
   stroke: var(--line);
 }
 
+#chart .marker {
+  stroke: var(--muted);
+  stroke-dasharray: 2 4;
+}
+
+#chart .marker-label {
+  font-size: 12px;
+}
+
+#chart-cursor line {
+  stroke: var(--blue);
+  stroke-opacity: .35;
+}
+
+#chart-cursor circle {
+  fill: var(--blue);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+#chart .near-field {
+  fill: var(--line);
+  opacity: .5;
+}
+
 .legend {
   display: flex;
   flex-wrap: wrap;
@@ -430,6 +477,37 @@ button:disabled {
 
 .legend span:nth-child(3) {
   color: var(--green);
+}
+
+.legend span:nth-child(n+4) {
+  color: var(--violet);
+}
+
+.measure-table th {
+  overflow-wrap: normal;
+}
+
+.measure-table td {
+  padding: 6px 8px 6px 0;
+  vertical-align: middle;
+}
+
+.measure-table input {
+  margin-top: 0 !important;
+  min-width: 80px !important;
+}
+
+.measure-table .sign {
+  margin-top: 0;
+}
+
+.measure-table .delta {
+  white-space: nowrap;
+}
+
+.measure-table button {
+  min-height: 36px;
+  padding: 6px 10px;
 }
 
 .table-wrap {
@@ -481,6 +559,15 @@ footer span {
   box-shadow: 0 8px 30px #0003;
   max-width: 90vw;
   z-index: 5;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .skip {

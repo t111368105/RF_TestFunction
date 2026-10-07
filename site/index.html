@@ -63,6 +63,7 @@
             <article>
               <h2>01 <span>Propagation</span></h2>
               <div id="propagation" class="fields"></div>
+              <p class="hint">Other path losses: polarization mismatch, pointing, atmospheric and rain loss, connectors, and any other loss between the two antennas.</p>
             </article>
             <article>
               <h2>02 <span>Power &amp; Antennas</span></h2>
@@ -117,25 +118,51 @@
               <span>━━ Predicted power</span>
               <span>┄ Sensitivity</span>
               <span>┄ Sensitivity + required margin</span>
+              <span id="legend-measured" hidden>● Measured</span>
+              <span id="legend-fit" hidden>╌ Fitted</span>
             </p>
             <label for="distance-slider">Inspect distance (log scale)</label>
             <input id="distance-slider" type="range" step="any">
             <p id="distance-readout" class="mono"></p>
           </article>
-          <div class="two-col">
-            <article>
-              <h3>Noise and SNR</h3>
-              <div id="noise-fields" class="fields"></div>
-              <div id="noise-results" aria-live="polite"></div>
-              <p class="hint">290 K: noise = −173.975 + 10 log₁₀(BW) + NF. The total system NF must include the RX cable, amplifier and receiver, referred to the RX antenna output; do not enter the amplifier NF alone.</p>
-            </article>
-            <article>
-              <h3>Measured vs. Predicted</h3>
-              <label>Measured receiver input (dBm)<input id="measured" inputmode="decimal" placeholder="Optional"></label>
-              <p id="measurement" aria-live="polite"></p>
-              <p class="hint">Measure at the receiver input after the RX amplifier, under the same operating conditions.</p>
-            </article>
-          </div>
+          <article>
+            <h3>Noise and SNR</h3>
+            <div id="noise-fields" class="fields"></div>
+            <div id="noise-results" aria-live="polite"></div>
+            <p class="hint">290 K: noise = −173.975 + 10 log₁₀(BW) + NF. The total system NF must include the RX cable, amplifier and receiver, referred to the RX antenna output; do not enter the amplifier NF alone. Tick the box to derive it with the Friis formula, treating the RX cable as a passive loss at 290 K (NF = loss).</p>
+          </article>
+          <article>
+            <h3>Data Rate and Eb/N₀</h3>
+            <div id="data-fields" class="fields"></div>
+            <div id="data-results" aria-live="polite"></div>
+            <p class="hint">Uses the total system noise figure above, at 290 K. C/N₀ = C − (−173.975 + NF); Eb/N₀ = C/N₀ − 10 log₁₀(Rb). The required Eb/N₀ depends on the modulation, coding and target bit error rate: for example, uncoded BPSK or QPSK needs about 9.6 dB for a BER of 10⁻⁵. Implementation loss covers demodulator and filter imperfections.</p>
+          </article>
+          <!-- Rows and results are rendered by measurements.mjs -->
+          <article>
+            <h3>Measured vs. Predicted</h3>
+            <p class="hint">Measure at the receiver input after the RX amplifier, under the same operating conditions. With two or more distances, a log-distance path-loss model is fitted and drawn on the chart above.</p>
+            <label>Measurement distance unit<select id="measure-unit">
+                <option value="0.001">m</option>
+                <option value="1">km</option>
+              </select></label>
+            <div class="table-wrap">
+              <table class="measure-table">
+                <thead>
+                  <tr><th>Distance</th><th>Measured (dBm)</th><th>Δ vs. predicted</th><th><span class="visually-hidden">Remove</span></th></tr>
+                </thead>
+                <tbody id="measure-rows"></tbody>
+              </table>
+            </div>
+            <div class="actions">
+              <button type="button" id="measure-add">Add Row</button>
+            </div>
+            <details>
+              <summary>Paste from a spreadsheet</summary>
+              <label>One measurement per line: distance, then measured dBm (tab, comma, semicolon or space separated)<textarea id="measure-paste" rows="4" placeholder="1&#9;-45.2&#10;2&#9;-51.8"></textarea></label>
+              <button type="button" id="measure-import">Add Pasted Rows</button>
+            </details>
+            <div id="fit-results" aria-live="polite"></div>
+          </article>
           <article>
             <h3>Save and Export</h3>
             <label>Plan name<input id="plan-name" placeholder="Untitled link"></label>
@@ -148,7 +175,7 @@
           </article>
         </div>
         <!-- Also copied into the printed report: keep on one line. -->
-        <p class="assumptions">Free-space, fixed-gain model; shadowing, fading, interference, saturation and near-field effects are not included. Maximum distance is derived from sensitivity and required margin, not from the SNR target. EIRP is an equivalent power, not a value measured at a physical connector; meeting the power target does not guarantee a usable link.</p>
+        <p class="assumptions">Free-space, fixed-gain model; shadowing, fading, interference, saturation and near-field effects are not included. Distances under 10 wavelengths are flagged as near field; larger antennas also need at least 2D²/λ. Maximum distance is derived from sensitivity and required margin, not from the SNR target. EIRP is an equivalent power, not a value measured at a physical connector; meeting the power target does not guarantee a usable link.</p>
       </section>
 
       <!-- Power Converter -->
@@ -162,7 +189,10 @@
                 <option value="dbm">W → dBm</option>
               </select></label>
             <label id="power-label" for="power-input">Input power (dBm)</label>
-            <input id="power-input" inputmode="decimal" placeholder="e.g. 30">
+            <div class="input-unit">
+              <input id="power-input" inputmode="decimal" placeholder="e.g. 30">
+              <button type="button" class="sign" data-sign-for="power-input" aria-label="Toggle minus sign">±</button>
+            </div>
             <button id="power-clear">Clear</button>
           </article>
           <article class="result" id="power-result" aria-live="polite"></article>

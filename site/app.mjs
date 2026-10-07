@@ -1,6 +1,6 @@
 // Entry point: tab navigation and wiring between the pages.
 
-import { notice } from './ui.mjs';
+import { notice, initSignButtons } from './ui.mjs';
 import { initBudget, loadPlan, analyzePlan } from './budget.mjs';
 import { initPlans, addPlan, renderPlans } from './plans.mjs';
 import { initTools } from './tools.mjs';
@@ -17,6 +17,7 @@ function showTab(id) {
 
 document.querySelectorAll('[data-tab]').forEach((e) => (e.onclick = () => showTab(e.dataset.tab)));
 
+initSignButtons();
 initBudget({ addPlan });
 initPlans({
   onOpen(plan, analyze) {
