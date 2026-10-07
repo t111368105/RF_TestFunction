@@ -2,6 +2,7 @@
 
 import { number, convertPower, doppler } from './calculations.mjs';
 import { $, fmt, read, write, bindUnit } from './ui.mjs';
+import { t } from './i18n.mjs';
 
 const toolIds = [
   'power-direction',
@@ -20,13 +21,13 @@ function persistTools() {
 function powerResult() {
   const toWatts = $('power-direction').value === 'watts';
   const v = convertPower(number($('power-input').value), toWatts);
-  $('power-label').textContent = `Input power (${toWatts ? 'dBm' : 'W'})`;
+  $('power-label').textContent = t('Input power ({unit})', { unit: toWatts ? 'dBm' : 'W' });
   $('power-result').innerHTML =
-    '<p class="eyebrow">CONVERTED POWER</p>' +
+    `<p class="eyebrow">${t('CONVERTED POWER')}</p>` +
     `<div class="big">${v === null ? '— —' : fmt(v, 10)}</div>` +
     `<p>${toWatts ? 'W' : 'dBm'}</p>` +
     (v === null
-      ? '<small>Enter a valid power; W must be greater than zero and the result must be finite.</small>'
+      ? `<small>${t('Enter a valid power; W must be greater than zero and the result must be finite.')}</small>`
       : '');
   persistTools();
 }
@@ -39,24 +40,24 @@ function dopplerResult() {
   const r = speed >= 0 ? doppler(f, v) : null;
   const unit = $('doppler-frequency-unit').selectedOptions[0]?.textContent ?? 'Hz';
 
-  let html = '<p class="eyebrow">FREQUENCY OFFSET</p>';
+  let html = `<p class="eyebrow">${t('FREQUENCY OFFSET')}</p>`;
   if (r) {
     const direction =
       r.shift === 0
-        ? 'No radial motion, no frequency shift.'
+        ? t('No radial motion, no frequency shift.')
         : r.shift > 0
-          ? 'Approaching: received frequency increases.'
-          : 'Receding: received frequency decreases.';
+          ? t('Approaching: received frequency increases.')
+          : t('Receding: received frequency decreases.');
     html +=
       `<div class="big">${(r.shift > 0 ? '+' : '') + fmt(r.shift, 9)}</div>` +
       `<p>Hz · ${fmt(r.shift / 1000, 9)} kHz</p>` +
-      '<hr><p>Received frequency</p>' +
+      `<hr><p>${t('Received frequency')}</p>` +
       `<h2 class="mono">${fmt(r.received / scale, 12)} ${unit}</h2>` +
       `<p>${direction}</p>`;
   } else {
     html +=
       '<div class="big">— —</div><p>Hz </p>' +
-      '<small>Enter a positive frequency and a non-negative radial velocity between 0 and 2,997.92458 km/s.</small>';
+      `<small>${t('Enter a positive frequency and a non-negative radial velocity between 0 and 2,997.92458 km/s.')}</small>`;
   }
   $('doppler-result').innerHTML = html;
   persistTools();

@@ -2,6 +2,7 @@
 
 import { budget, powerAt, fittedPower } from './calculations.mjs';
 import { fmt } from './ui.mjs';
+import { t } from './i18n.mjs';
 
 const LEFT = 70;
 const RIGHT = 890;
@@ -40,15 +41,15 @@ export function distanceChart(v, measured = { points: [], fit: null }) {
     `<line x1="${LEFT}" x2="${RIGHT}" y1="${y(p)}" y2="${y(p)}" stroke="var(--${color})" stroke-dasharray="${dash}"/>`;
 
   let svg =
-    '<svg viewBox="0 0 930 330" role="img" aria-label="Received power versus distance, distance on a logarithmic scale">' +
-    '<title>Received power decreases with distance</title>';
+    `<svg viewBox="0 0 930 330" role="img" aria-label="${t('Received power versus distance, distance on a logarithmic scale')}">` +
+    `<title>${t('Received power decreases with distance')}</title>`;
 
   // Shade distances under the far-field limit, where the free-space model does not apply.
   const nearEnd = Math.min(Math.log10(r.farFieldMin), hi);
   if (nearEnd > lo) {
     svg +=
       `<rect class="near-field" x="${LEFT}" y="${BOTTOM - HEIGHT}" width="${x(nearEnd) - LEFT}" height="${HEIGHT}"/>` +
-      `<text x="${LEFT + 6}" y="${BOTTOM - HEIGHT + 16}">Near field</text>`;
+      `<text x="${LEFT + 6}" y="${BOTTOM - HEIGHT + 16}">${t('Near field')}</text>`;
   }
   for (let i = 0; i < 5; i++) {
     const p = ymin + ((ymax - ymin) * i) / 4;
@@ -63,12 +64,12 @@ export function distanceChart(v, measured = { points: [], fit: null }) {
     hline(required, 'green', '9 5') +
     `<polyline points="${points.map((p) => `${x(p[0])},${y(p[1])}`).join(' ')}" fill="none" stroke="var(--blue)" stroke-width="3"/>` +
     measuredSvg(measured, v[1], lo, hi, x, y) +
-    marker(center, 'Link distance', 32) +
-    (r.maxDistance && Math.log10(r.maxDistance) <= hi ? marker(Math.log10(r.maxDistance), 'Max distance', 48) : '') +
+    marker(center, t('Link distance'), 32) +
+    (r.maxDistance && Math.log10(r.maxDistance) <= hi ? marker(Math.log10(r.maxDistance), t('Max distance'), 48) : '') +
     // Moved by cursorAt() as the distance slider changes.
     `<g id="chart-cursor"><line x1="0" x2="0" y1="${BOTTOM - HEIGHT}" y2="${BOTTOM}"/><circle r="6"/></g>` +
-    '<text x="70" y="22">Receiver input (dBm)</text>' +
-    '<text x="480" y="325" text-anchor="middle">Distance (km, log scale)</text></svg>';
+    `<text x="70" y="22">${t('Receiver input (dBm)')}</text>` +
+    `<text x="480" y="325" text-anchor="middle">${t('Distance (km, log scale)')}</text></svg>`;
 
   return {
     svg,

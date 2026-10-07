@@ -2,6 +2,7 @@
 
 import { labels, budget, validPlan, upgradePlan } from './calculations.mjs';
 import { $, esc, fmt, notice, read, write, table } from './ui.mjs';
+import { t, locale } from './i18n.mjs';
 
 let plans = [];
 let selected = []; // Ids of the plans chosen for comparison (at most two).
@@ -25,12 +26,12 @@ function planHtml(p) {
   return (
     '<article><label class="plan-title">' +
     `<input type="checkbox" data-select="${id}" ${selected.includes(p.id) ? 'checked' : ''}>${esc(p.name)}</label>` +
-    `<p class="hint">${esc(new Date(p.date).toLocaleString())}</p>` +
-    `<p>Receiver input ${fmt(r.output)} dBm · margin ${fmt(r.margin)} dB</p>` +
+    `<p class="hint">${esc(new Date(p.date).toLocaleString(locale))}</p>` +
+    `<p>${t('Receiver input {input} dBm · margin {margin} dB', { input: fmt(r.output), margin: fmt(r.margin) })}</p>` +
     '<div class="actions">' +
-    `<button data-load="${id}">Load Parameters</button>` +
-    `<button data-view="${id}">Analyze / Export</button>` +
-    `<button data-delete="${id}">Delete</button>` +
+    `<button data-load="${id}">${t('Load Parameters')}</button>` +
+    `<button data-view="${id}">${t('Analyze / Export')}</button>` +
+    `<button data-delete="${id}">${t('Delete')}</button>` +
     '</div></article>'
   );
 }
@@ -40,14 +41,14 @@ function comparisonHtml(a, b) {
   const rb = budget(b.values);
   const rows = [
     ...labels.map((l, i) => [l, fmt(a.values[i], 7), fmt(b.values[i], 7)]),
-    ['Receiver input (dBm)', fmt(ra.output), fmt(rb.output)],
-    ['Link margin (dB)', fmt(ra.margin), fmt(rb.margin)],
+    [t('Receiver input (dBm)'), fmt(ra.output), fmt(rb.output)],
+    [t('Link margin (dB)'), fmt(ra.margin), fmt(rb.margin)],
   ];
   return (
-    '<article><h3>Plan Comparison: A → B</h3>' +
-    table(['Parameter', 'A: ' + a.name, 'B: ' + b.name], rows) +
-    `<p>Δ Receiver input (B − A): ${fmt(rb.output - ra.output)} dB<br>` +
-    `Δ Margin (B − A): ${fmt(rb.margin - ra.margin)} dB</p></article>`
+    `<article><h3>${t('Plan Comparison: A → B')}</h3>` +
+    table([t('Parameter'), 'A: ' + a.name, 'B: ' + b.name], rows) +
+    `<p>${t('Δ Receiver input (B − A): {value} dB', { value: fmt(rb.output - ra.output) })}<br>` +
+    `${t('Δ Margin (B − A): {value} dB', { value: fmt(rb.margin - ra.margin) })}</p></article>`
   );
 }
 
@@ -55,8 +56,8 @@ export function renderPlans() {
   $('count').textContent = plans.length;
   $('plan-list').innerHTML = plans.length
     ? plans.map(planHtml).join('')
-    : '<article><h3>No saved plans yet</h3>' +
-      '<p>Calculate a link first, then save a named plan from the analysis section.</p></article>';
+    : `<article><h3>${t('No saved plans yet')}</h3>` +
+      `<p>${t('Calculate a link first, then save a named plan from the analysis section.')}</p></article>`;
   const pair = selected.map((id) => plans.find((p) => p.id === id)).filter(Boolean);
   $('comparison').innerHTML = pair.length === 2 ? comparisonHtml(...pair) : '';
 }
@@ -67,7 +68,7 @@ function onSelect(e) {
   if (e.target.checked) {
     if (selected.length >= 2) {
       e.target.checked = false;
-      notice('Select at most two plans.');
+      notice(t('Select at most two plans.'));
       return;
     }
     selected.push(id);
@@ -90,7 +91,7 @@ export function initPlans({ onOpen }) {
     const p = plans.find((x) => x.id === id);
     if (!p) return;
     if (b.dataset.delete) {
-      if (!confirm(`Delete "${p.name}"?`)) return;
+      if (!confirm(t('Delete "{name}"?', { name: p.name }))) return;
       if (store(plans.filter((x) => x.id !== id))) {
         selected = selected.filter((x) => x !== id);
         renderPlans();

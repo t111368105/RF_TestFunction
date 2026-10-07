@@ -8,6 +8,8 @@ import {
   doppler,
   cascadeNF,
   dataLink,
+  noiseDensity,
+  inputWarnings,
   fitPathLoss,
   fittedPower,
   fittedMaxDistance,
@@ -54,6 +56,27 @@ test('Margin boundaries and invalid inputs', () => {
   assert.throws(() => budget(base.slice(0, 10)));
 });
 
+test('Amplifier position changes the stages, not the receiver input', () => {
+  const v = [2400, 1, 20, 2, 2, 10, 2, 3, -90, 10, 0];
+  const after = budget(v);
+  const before = budget(v, { ampFirst: true });
+  close(before.output, after.output);
+  close(before.margin, after.margin);
+  assert.equal(before.stages[6][0], 'RX amplifier output');
+  close(before.stages[6][2], before.received + 10);
+  close(after.stages[6][2], after.received - 3);
+});
+
+test('Plausibility warnings', () => {
+  assert.deepEqual(inputWarnings(base), []);
+  const positive = [...base];
+  positive[8] = 90;
+  assert.match(inputWarnings(positive)[0], /minus sign/);
+  const wrongUnit = [...base];
+  wrongUnit[0] = 2.4e9; // Hz typed as MHz.
+  assert.match(inputWarnings(wrongUnit)[0], /Frequency/);
+});
+
 test('Other path losses reduce every stage after free-space loss', () => {
   const b = budget(base);
   const r = budget([...base.slice(0, 10), 3]);
@@ -77,6 +100,17 @@ test('Noise is referred to RX antenna before amplifier', () => {
   const n = noise(v, 1e6, 3, 10);
   close(n.floor, -110.975);
   close(n.snr, budget(v).received + 110.975);
+  close(n.tsys, 290 * 10 ** 0.3);
+  close(n.gOverT, -25.62397997898956);
+  // The receiver input level at which the SNR is exactly the target.
+  close(n.sensitivity, -110.975 + 10 + (10 - 3));
+  // Antenna noise temperature: 290 K reproduces the NF-only result; a cold sky lowers the floor.
+  close(noiseDensity(3, 290).n0, -173.975 + 3);
+  close(noiseDensity(1, 50).tsys, 125.08836942030851);
+  close(noiseDensity(1, 50).n0, -177.62681066554032);
+  close(noise(v, 1e6, 1, 10, 50).floor, -177.62681066554032 + 60);
+  assert.equal(noiseDensity(3, -1), null);
+  assert.equal(noise(v, 1e6, 3, 10, NaN), null);
   assert.equal(noise(v, 0, 3, 10), null);
   assert.equal(noise(v, 1e6, -1, 10), null);
 });
@@ -91,6 +125,7 @@ test('C/N0, Eb/N0 and maximum data rate', () => {
   close(d.margin, d.ebn0 - 11.6);
   // At the maximum rate the margin is exactly zero.
   close(dataLink(v, 3, d.maxRate, 9.6, 2).margin, 0);
+  close(dataLink(v, 1, 1e6, 9.6, 2, 50).cn0, received + 177.62681066554032);
   close(d.maxRate, 10 ** ((d.cn0 - 11.6) / 10));
 
   const partial = dataLink(v, 3, NaN, NaN, 0);
@@ -108,6 +143,9 @@ test('Friis cascade noise figure', () => {
   close(cascadeNF(3, 0, 0, 5), 8); // A passive loss in front adds directly when there is no gain.
   close(cascadeNF(0, 30, 0.5, 8), 0.520503046103113);
   close(cascadeNF(0, 0, 0, 0), 0);
+  // A masthead LNA ahead of the cable hides most of the cable loss.
+  close(cascadeNF(3, 20, 1, 10, true), 1.6090400081529663);
+  close(cascadeNF(3, 20, 1, 10, false), 4.299879362235896);
   for (const bad of [[-1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, -1], [NaN, 0, 0, 0], [0, Infinity, 0, 0]]) {
     assert.equal(cascadeNF(...bad), null);
   }

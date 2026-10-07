@@ -1,6 +1,9 @@
 /* ---------- Theme tokens ---------- */
 
 :root {
+  /* Widest the page content grows to; text blocks are limited separately (--text-width). */
+  --content-width: 2400px;
+  --text-width: 90ch;
   color-scheme: light;
   --bg: #f1f5fa;
   --surface: #fff;
@@ -12,6 +15,11 @@
   --orange: #b76305;
   --green: #168249;
   --violet: #7b3fc4;
+  --result-bg: #122b50;
+  --result-ink: #edf5ff;
+  --result-muted: #b9c9df;
+  --result-line: #3b5374;
+  --result-eyebrow: #90baff;
 }
 
 * {
@@ -28,16 +36,21 @@ body {
 /* Set on <html> by the inline script in index.html and by prefs.mjs. */
 :root[data-theme=dark] {
   color-scheme: dark;
-  --bg: #0c1524;
-  --surface: #152238;
-  --ink: #e7eefb;
-  --muted: #a9bbd3;
-  --line: #30415a;
+  --bg: #0a0a0b;
+  --surface: #161618;
+  --ink: #ececee;
+  --muted: #a1a1aa;
+  --line: #2e2e33;
   --blue: #82afff;
-  --field: #101c30;
+  --field: #0f0f11;
   --orange: #ffbc60;
   --green: #64d89d;
   --violet: #c39bff;
+  --result-bg: #1e1e21;
+  --result-ink: #f4f4f5;
+  --result-muted: #a1a1aa;
+  --result-line: #3a3a40;
+  --result-eyebrow: #82afff;
 }
 
 /* ---------- Header and navigation ---------- */
@@ -47,7 +60,8 @@ header {
   justify-content: space-between;
   gap: 20px;
   align-items: center;
-  padding: 20px max(24px, calc((100vw - 1240px) / 2));
+  /* Percentages exclude the scrollbar, unlike vw, so the header lines up with the content below. */
+  padding: 20px max(24px, calc((100% - var(--content-width)) / 2 + 24px));
   background: var(--surface);
   border-bottom: 1px solid var(--line);
 }
@@ -72,17 +86,29 @@ header {
   border-radius: 8px;
 }
 
+.header-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 18px;
+}
+
+.i18n-pending body {
+  visibility: hidden;
+}
+
 .theme {
   display: flex;
   align-items: center;
   gap: 10px;
   margin: 0;
+  white-space: nowrap;
 }
 
 nav {
   display: flex;
   gap: 8px;
-  max-width: 1288px;
+  max-width: var(--content-width);
   margin: auto;
   padding: 18px 24px;
   flex-wrap: wrap;
@@ -107,7 +133,7 @@ nav button[aria-current] {
 /* ---------- Layout and typography ---------- */
 
 main {
-  max-width: 1288px;
+  max-width: var(--content-width);
   margin: auto;
   padding: 12px 24px 50px;
 }
@@ -157,7 +183,7 @@ p {
 
 .workspace {
   display: grid;
-  grid-template-columns: 1.05fr 1fr;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   gap: 26px;
 }
 
@@ -165,6 +191,24 @@ p {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
+}
+
+/* Grid items default to their content's minimum width; let them shrink so wide content scrolls. */
+.workspace > *,
+.two-col > * {
+  min-width: 0;
+}
+
+/* The results column follows the page while the long form scrolls; it scrolls itself if taller. */
+@media (min-width: 1024px) {
+  .workspace > :last-child {
+    position: sticky;
+    top: 16px;
+    align-self: start;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 article,
@@ -189,7 +233,7 @@ details[open] summary {
 
 .fields {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
   gap: 16px;
 }
 
@@ -200,8 +244,126 @@ label {
   margin-bottom: 14px;
 }
 
+.field-help {
+  display: block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
 .fields .span {
   grid-column: 1 / -1;
+}
+
+.estimator {
+  margin-top: 4px;
+}
+
+/* A loss field with its calculator underneath; the calculator stacks its own fields in the cell. */
+/* Cells in a row stretch to the same height, so the calculators sit on one line below help texts of
+   different lengths. */
+.loss-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.loss-cell > label {
+  margin-bottom: 8px;
+}
+
+.loss-cell > .estimator {
+  margin: auto 0 4px;
+  padding: 12px 14px;
+}
+
+.loss-cell > .estimator summary {
+  font-size: 14px;
+}
+
+.loss-cell > .estimator[open] summary {
+  margin-bottom: 14px;
+}
+
+/* An open calculator takes a whole row so its inputs and formulas have room; its field keeps the
+   width of one column. */
+.loss-cell:has(> .estimator[open]) {
+  grid-column: 1 / -1;
+}
+
+.loss-cell:has(> .estimator[open]) > label {
+  max-width: min(100%, 360px);
+}
+
+/* ITU-R reference values for the default site (Taipei); see estimator.mjs. */
+.site-value,
+input.site-value {
+  color: var(--orange);
+  font-weight: 600;
+}
+
+.formulas {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 12px;
+}
+
+.formulas h4 {
+  font-size: 15px;
+  margin: 0 0 8px;
+}
+
+.fields h5 {
+  font-size: 13px;
+  margin: 4px 0 -6px;
+  color: var(--muted);
+}
+
+.formulas h5 {
+  font-size: 13px;
+  margin: 14px 0 4px;
+  color: var(--muted);
+}
+
+.formulas .caption {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 4px 0;
+}
+
+/* Native MathML equations rendered by tools/render_formulas.py; wide ones scroll on narrow screens. */
+.eq {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0;
+}
+
+/* Left-align the rows of piecewise definitions (cases), as in print. */
+.eq mtd {
+  text-align: left;
+  padding: 1px 1.2em 1px 0;
+}
+
+.eq math {
+  /* Fonts with an OpenType MATH table, which stretchy braces and radicals need. */
+  font-family: "Cambria Math", "STIX Two Math", "Latin Modern Math", math;
+  font-size: 1.1em;
+  margin: 6px 0;
+  /* As wide as the equation, so the .eq wrapper scrolls instead of clipping it; centred when narrower. */
+  width: max-content;
+  min-width: 100%;
+}
+
+.loss-group {
+  font-size: 14px;
+  margin: 20px 0 10px;
+}
+
+.subhead {
+  font-size: 15px;
+  margin: 8px 0 12px;
+  color: var(--muted);
 }
 
 label:has(input[type=checkbox]) {
@@ -323,6 +485,12 @@ button:disabled {
   color: var(--muted);
 }
 
+.hint,
+.assumptions,
+.formulas .caption {
+  max-width: var(--text-width);
+}
+
 .settings label {
   margin: 5px 0;
 }
@@ -334,15 +502,15 @@ button:disabled {
 /* ---------- Results ---------- */
 
 .result {
-  background: #122b50;
-  color: #edf5ff;
+  background: var(--result-bg);
+  color: var(--result-ink);
   border: 0;
   min-height: 240px;
   padding: 30px;
 }
 
 .result .eyebrow {
-  color: #90baff;
+  color: var(--result-eyebrow);
 }
 
 .result h2 {
@@ -356,7 +524,7 @@ button:disabled {
 }
 
 .result small {
-  color: #b9c9df;
+  color: var(--result-muted);
   font-size: 14px;
 }
 
@@ -364,7 +532,7 @@ button:disabled {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-  border-top: 1px solid #3b5374;
+  border-top: 1px solid var(--result-line);
   padding-top: 20px;
   margin-top: 22px;
 }
@@ -535,7 +703,7 @@ td {
 /* ---------- Footer, notice and utilities ---------- */
 
 footer {
-  max-width: 1240px;
+  max-width: calc(var(--content-width) - 48px);
   margin: auto;
   padding: 24px;
   border-top: 1px solid var(--line);
@@ -614,8 +782,13 @@ footer span {
   }
 }
 
+@media (max-width: 1023px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 760px) {
-  .workspace,
   .two-col {
     grid-template-columns: 1fr;
   }
@@ -679,10 +852,13 @@ footer span {
   .metrics strong {
     font-size: 18px;
   }
+
+  .eq math {
+    font-size: 0.95em;
+  }
 }
 
 @media (max-width: 380px) {
-  .fields,
   .metrics {
     grid-template-columns: 1fr;
   }

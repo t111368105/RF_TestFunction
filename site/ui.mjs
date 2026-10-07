@@ -1,6 +1,7 @@
 // Shared DOM, formatting and storage helpers.
 
 import { number } from './calculations.mjs';
+import { t } from './i18n.mjs';
 
 export const $ = (id) => document.getElementById(id);
 
@@ -8,7 +9,7 @@ const ENTITIES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '
 export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ENTITIES[c]);
 
 export function fmt(x, digits = 2) {
-  if (x == null || !Number.isFinite(x)) return 'Out of range';
+  if (x == null || !Number.isFinite(x)) return t('Out of range');
   if (x !== 0 && (Math.abs(x) < 0.001 || Math.abs(x) >= 1e9)) return x.toExponential(6);
   return x.toLocaleString('en-US', { maximumFractionDigits: digits });
 }
@@ -46,7 +47,7 @@ export function write(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
     return true;
   } catch {
-    notice('Unable to save: browser storage is full or unavailable.');
+    notice(t('Unable to save: browser storage is full or unavailable.'));
     return false;
   }
 }
@@ -64,8 +65,8 @@ export function field(id, title, value, unit = '', extra = '', signed = false) {
  * Touch decimal keypads (notably iOS) have no minus key, so fields that can be negative get a ±
  * button. It is only shown for coarse pointers; see .sign in style.css.
  */
-export function signButton(id, label = 'Toggle minus sign') {
-  return `<button type="button" class="sign" data-sign-for="${id}" aria-label="${label}">±</button>`;
+export function signButton(id, label = t('Toggle minus sign')) {
+  return `<button type="button" class="sign" data-sign-for="${id}" aria-label="${esc(label)}">±</button>`;
 }
 
 function toggleSign(input) {
@@ -96,23 +97,29 @@ export function table(head, rows) {
   return `<div class="table-wrap"><table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table></div>`;
 }
 
+/** Default converter for bindUnit: option values are scale factors to a base unit. */
+function scaleUnits(value, from, to) {
+  const converted = value * (number(from) / number(to));
+  return value !== 0 && converted === 0 ? null : converted; // Underflow.
+}
+
 /**
- * Keeps an input's physical value when its unit <select> changes (the option values are scale
- * factors). Returns a function that re-reads the current unit after a programmatic change.
+ * Keeps an input's physical value when its unit <select> changes. convert(value, fromUnit, toUnit)
+ * receives the option values and returns the converted number, or null when it has no equivalent.
+ * Returns a function that re-reads the current unit after a programmatic change.
  */
-export function bindUnit(selectId, inputId, onChange) {
+export function bindUnit(selectId, inputId, onChange, convert = scaleUnits) {
   const select = $(selectId);
-  let old = number(select.value);
+  let old = select.value;
   select.addEventListener('change', () => {
     const value = number($(inputId).value);
-    const next = number(select.value);
+    const next = select.value;
     if (Number.isFinite(value)) {
-      const converted = value * (old / next);
-      const ok = Number.isFinite(converted) && !(value !== 0 && converted === 0);
-      $(inputId).value = ok ? String(Number(converted.toPrecision(15))) : '';
+      const converted = convert(value, old, next);
+      $(inputId).value = Number.isFinite(converted) ? String(Number(converted.toPrecision(15))) : '';
     }
     old = next;
     onChange();
   });
-  return () => (old = number(select.value));
+  return () => (old = select.value);
 }

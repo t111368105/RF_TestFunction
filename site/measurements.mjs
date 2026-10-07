@@ -3,6 +3,7 @@
 
 import { number, budget, powerAt, fitPathLoss, fittedPower, fittedMaxDistance } from './calculations.mjs';
 import { $, esc, fmt, notice, table, signButton } from './ui.mjs';
+import { t } from './i18n.mjs';
 
 const blankRow = () => ({ d: '', p: '' });
 
@@ -55,7 +56,7 @@ const signed = (x) => (x > 0 ? '+' : '') + fmt(x);
 
 function deltaText(r) {
   if (r.blank) return '';
-  if (!r.valid || !Number.isFinite(r.delta)) return 'Invalid';
+  if (!r.valid || !Number.isFinite(r.delta)) return t('Invalid');
   return `${signed(r.delta)} dB`;
 }
 
@@ -66,30 +67,37 @@ export function fitRows(s, summary) {
   // A line through two points always fits exactly, so the spread is only meaningful from three.
   const spread = fit.count > 2;
   return [
-    ['Points used', String(fit.count)],
-    ['Path-loss exponent n', `${fmt(fit.n, 3)} (free space: 2)`],
-    [`Fitted receiver input at ${fmt(v[1], 6)} km`, `${fmt(fit.p0)} dBm (predicted ${fmt(budget(v).output)} dBm)`],
-    ['Shadowing σ (RMS residual)', spread ? `${fmt(fit.rmse)} dB` : 'Needs 3 or more points'],
-    ['R²', spread ? fmt(fit.r2, 4) : 'Needs 3 or more points'],
-    ['Maximum distance (fitted model)', fitMaxDistance === null ? 'Not reached' : `${fmt(fitMaxDistance, 5)} km`],
+    [t('Points used'), String(fit.count)],
+    [t('Path-loss exponent n'), t('{n} (free space: 2)', { n: fmt(fit.n, 3) })],
+    [
+      t('Fitted receiver input at {distance} km', { distance: fmt(v[1], 6) }),
+      t('{fitted} dBm (predicted {predicted} dBm)', { fitted: fmt(fit.p0), predicted: fmt(budget(v).output) }),
+    ],
+    [t('Shadowing σ (RMS residual)'), spread ? `${fmt(fit.rmse)} dB` : t('Needs 3 or more points')],
+    ['R²', spread ? fmt(fit.r2, 4) : t('Needs 3 or more points')],
+    [t('Maximum distance (fitted model)'), fitMaxDistance === null ? t('Not reached') : `${fmt(fitMaxDistance, 5)} km`],
   ];
 }
 
 function resultsHtml(s, summary) {
   const { used, fit, meanDelta } = summary;
-  if (!used.length) return '<p>No measured value entered yet</p>';
+  if (!used.length) return `<p>${t('No measured value entered yet')}</p>`;
   const verdict =
     meanDelta < 0
-      ? 'Measured is lower on average; this may include unmodeled losses or measurement differences.'
-      : 'Measured meets or exceeds the prediction on average.';
-  let html = `<p>Mean measured − predicted: ${signed(meanDelta)} dB over ${used.length} point${used.length > 1 ? 's' : ''}. ${verdict}</p>`;
+      ? t('Measured is lower on average; this may include unmodeled losses or measurement differences.')
+      : t('Measured meets or exceeds the prediction on average.');
+  const mean =
+    used.length === 1
+      ? t('Mean measured − predicted: {delta} dB over 1 point.', { delta: signed(meanDelta) })
+      : t('Mean measured − predicted: {delta} dB over {count} points.', { delta: signed(meanDelta), count: used.length });
+  let html = `<p>${mean} ${verdict}</p>`;
   if (fit) {
-    html += `<h3>Path-Loss Fit</h3>${table(['Item', 'Result'], fitRows(s, summary))}`;
-    html +=
-      '<p class="hint">Model: P(d) = P₀ − 10 n log₁₀(d / d₀), fitted by least squares. ' +
-      'n below 2 can occur with guided propagation such as corridors; n above 2 indicates obstruction or ground reflections.</p>';
+    html += `<h3>${t('Path-Loss Fit')}</h3>${table([t('Item'), t('Result')], fitRows(s, summary))}`;
+    html += `<p class="hint">${t(
+      'Model: P(d) = P₀ − 10 n log₁₀(d / d₀), fitted by least squares. n below 2 can occur with guided propagation such as corridors; n above 2 indicates obstruction or ground reflections.',
+    )}</p>`;
   } else {
-    html += '<p class="hint">Add measurements at two or more different distances to fit a path-loss exponent.</p>';
+    html += `<p class="hint">${t('Add measurements at two or more different distances to fit a path-loss exponent.')}</p>`;
   }
   return html;
 }
@@ -111,11 +119,11 @@ function renderRows() {
     .map(
       ({ d, p }, i) =>
         `<tr data-row="${i}">` +
-        `<td><input data-key="d" inputmode="decimal" aria-label="Distance, row ${i + 1}" value="${esc(d)}"></td>` +
-        `<td><div class="input-unit"><input data-key="p" inputmode="decimal" aria-label="Measured dBm, row ${i + 1}" value="${esc(p)}">` +
-        `${signButton('', `Toggle minus sign, row ${i + 1}`)}</div></td>` +
+        `<td><input data-key="d" inputmode="decimal" aria-label="${esc(t('Distance, row {row}', { row: i + 1 }))}" value="${esc(d)}"></td>` +
+        `<td><div class="input-unit"><input data-key="p" inputmode="decimal" aria-label="${esc(t('Measured dBm, row {row}', { row: i + 1 }))}" value="${esc(p)}">` +
+        `${signButton('', t('Toggle minus sign, row {row}', { row: i + 1 }))}</div></td>` +
         '<td class="delta mono"></td>' +
-        `<td><button type="button" data-remove aria-label="Remove row ${i + 1}">✕</button></td></tr>`,
+        `<td><button type="button" data-remove aria-label="${esc(t('Remove row {row}', { row: i + 1 }))}">✕</button></td></tr>`,
     )
     .join('');
   updateResults();
@@ -183,13 +191,19 @@ export function initMeasurements(onChange) {
   $('measure-import').onclick = () => {
     const { rows, skipped } = parsePasted($('measure-paste').value);
     if (!rows.length) {
-      notice('No rows found. Paste one "distance, dBm" pair per line.');
+      notice(t('No rows found. Paste one "distance, dBm" pair per line.'));
       return;
     }
     edit(() => {
       current.measurements = current.measurements.filter((r) => r.d.trim() || r.p.trim()).concat(rows);
     });
     $('measure-paste').value = '';
-    notice(`Added ${rows.length} row${rows.length > 1 ? 's' : ''}${skipped ? `; skipped ${skipped} invalid line${skipped > 1 ? 's' : ''}` : ''}.`);
+    const added = rows.length === 1 ? t('Added 1 row.') : t('Added {count} rows.', { count: rows.length });
+    const skippedText = !skipped
+      ? ''
+      : skipped === 1
+        ? t('Skipped 1 invalid line.')
+        : t('Skipped {count} invalid lines.', { count: skipped });
+    notice(skippedText ? `${added} ${skippedText}` : added);
   };
 }
