@@ -49,6 +49,7 @@ python tools/serve.py --lan    # 同網路的手機也能開，網址會印在�
 
 - 每次 push 和 pull request 都會執行計算測試與所有模組的語法檢查。
 - 只有 push 到 `main`（或在 Actions 頁手動執行）且測試通過時，才會把 `site/` 發布到 Pages；測試失敗時網站維持上一版。
+- 發布前 `tools/stamp_version.py` 會在 HTML 與各模組引用的 `.mjs`／`.css` 網址加上 `?v=<commit>`，讓每次部署都使用新網址，避免瀏覽器把快取的舊模組和新模組混用而無法啟動。原始碼不需手動改版本號。新增模組時，請用 `import … from './名稱.mjs'` 的寫法，否則檢查會失敗。
 
 首次設定：
 

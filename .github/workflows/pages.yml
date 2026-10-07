@@ -21,6 +21,8 @@ jobs:
         run: node --test tests/*.test.mjs
       - name: Verify JavaScript syntax
         run: for f in site/*.mjs; do node --check "$f"; done
+      - name: Verify cache-busting version stamp
+        run: cp -r site "$RUNNER_TEMP/site" && python3 tools/stamp_version.py "$RUNNER_TEMP/site" check
 
   # Deploys only after tests pass on a push to main (or a manual run), never for pull requests.
   deploy:
@@ -38,6 +40,9 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
+      # Gives every deploy its own module URLs so browsers never mix cached and new modules.
+      - name: Stamp module versions
+        run: python3 tools/stamp_version.py site "${GITHUB_SHA::8}"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
