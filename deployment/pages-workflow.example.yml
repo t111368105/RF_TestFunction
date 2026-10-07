@@ -24,7 +24,7 @@ jobs:
       - name: Verify calculations
         run: node --test tests/*.test.mjs
       - name: Verify JavaScript syntax
-        run: node --check site/app.mjs
+        run: for f in site/*.mjs; do node --check "$f"; done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

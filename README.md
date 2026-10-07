@@ -13,6 +13,20 @@ RFLinkBudget SwiftUI 專案的繁體中文網頁版，採原生 HTML/CSS/JavaScr
 - 雙向 dBm/W、單程一階 Doppler、頻率及徑向速度單位換算。
 - 響應式排版、系統／深／淺色、減少動態效果偏好、計算動畫、支援瀏覽器的觸覺回饋。
 
+## 程式結構
+
+| 檔案 | 用途 |
+|---|---|
+| `site/calculations.mjs` | 純計算（FSPL、鏈路預算、雜訊、功率、Doppler），不碰 DOM，由測試直接引用 |
+| `site/ui.mjs` | 共用的 DOM、格式化、localStorage 與單位切換工具 |
+| `site/budget.mjs` | Link Budget 頁：輸入表單、結果、距離／雜訊／實測分析、儲存與列印 |
+| `site/chart.mjs` | 接收功率對距離的 SVG 圖表 |
+| `site/report.mjs` | 列印／PDF 報告內容 |
+| `site/plans.mjs` | Saved Plans 頁：方案清單、刪除、雙方案比較 |
+| `site/tools.mjs` | Power Converter 與 Doppler Shift 頁 |
+| `site/prefs.mjs` | 外觀、動畫與觸覺回饋偏好 |
+| `site/app.mjs` | 進入點：分頁切換與各模組串接 |
+
 ## 本機預覽
 
 在專案目錄執行 `python3 -m http.server 8080 --directory site`，開啟 http://localhost:8080 。
@@ -31,7 +45,7 @@ RFLinkBudget SwiftUI 專案的繁體中文網頁版，採原生 HTML/CSS/JavaScr
 
 ```sh
 node --test tests/*.test.mjs
-node --check site/app.mjs
+for f in site/*.mjs; do node --check "$f"; done
 git add .
 git commit -m "Update RF tools"
 git push origin main

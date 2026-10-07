@@ -1,1 +1,215 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="LAB602 RF tools: link budget, FSPL, power conversion, Doppler shift and plan analysis."><title>RF TestFunction · LAB602</title><link rel="icon" href="./logo.png"><link rel="stylesheet" href="./style.css"><script type="module" src="./app.mjs"></script></head><body><a class="skip" href="#main">Skip to main content</a><header><div class="brand"><img src="./logo.png" alt="LAB602" width="46" height="46"><div>LAB602 <strong>RF TestFunction</strong></div></div><label class="theme">Appearance <select id="theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label></header><nav aria-label="Main tools"><button data-tab="budget" aria-current="page">Link Budget</button><button data-tab="power">Power Converter</button><button data-tab="doppler">Doppler Shift</button><button data-tab="plans">Saved Plans <span id="count">0</span></button></nav><main id="main"><section id="budget" class="page"><div class="heading"><div><p class="eyebrow">LINK BUDGET</p><h1>RF Link Budget</h1><p>Follow the power from transmitter to receiver and check the design margin at every stage.</p></div><div class="settings"><label><input type="checkbox" id="animation" checked> Calculation animation</label><label><input type="checkbox" id="haptics"> Haptic feedback (supported devices)</label></div></div><div class="workspace"><form id="budget-form" novalidate><article><h2>01 <span>Propagation</span></h2><div id="propagation" class="fields"></div></article><article><h2>02 <span>Power &amp; Antennas</span></h2><div id="antenna" class="fields"></div></article><details><summary>RX amplifier and cable losses</summary><div id="losses" class="fields"></div><p class="hint">TX: transmitter → cable → antenna<br>RX: antenna → cable → amplifier → receiver. Enter 0 dB if there is no amplifier.</p></details><article><h2>03 <span>Receiver Requirements</span></h2><div id="requirements" class="fields"></div><p class="hint">Sensitivity is referenced to the receiver input after the external amplifier.</p></article><p id="error" role="alert" class="error"></p><div class="actions"><button class="primary" type="submit">Calculate Link Budget</button><button type="button" id="clear">Clear</button><button type="button" id="undo" hidden>Undo Clear</button></div></form><div><article id="result" class="result" aria-live="polite"><p class="eyebrow">LINK PERFORMANCE</p><h2>Awaiting calculation</h2><p>Enter the parameters, then press "Calculate Link Budget".</p></article><article id="breakdown" hidden></article></div></div><div id="analysis" hidden><div class="heading"><div><p class="eyebrow">LINK ANALYSIS</p><h2>Distance, Noise and Measurement Analysis</h2></div><span id="calculated-at" class="hint"></span></div><details><summary>Input snapshot for this calculation</summary><div id="snapshot-inputs"></div></details><article><div class="heading"><h3>Distance and Coverage</h3><strong id="max-distance"></strong></div><div id="chart"></div><p class="legend"><span>━━ Predicted power</span><span>┄ Sensitivity</span><span>┄ Sensitivity + required margin</span></p><label for="distance-slider">Inspect distance (log scale)</label><input id="distance-slider" type="range" step="any"><p id="distance-readout" class="mono"></p></article><div class="two-col"><article><h3>Noise and SNR</h3><div id="noise-fields" class="fields"></div><div id="noise-results" aria-live="polite"></div><p class="hint">290 K: noise = −173.975 + 10 log₁₀(BW) + NF. The total system NF must include the RX cable, amplifier and receiver, referred to the RX antenna output; do not enter the amplifier NF alone.</p></article><article><h3>Measured vs. Predicted</h3><label>Measured receiver input (dBm)<input id="measured" inputmode="decimal" placeholder="Optional"></label><p id="measurement" aria-live="polite"></p><p class="hint">Measure at the receiver input after the RX amplifier, under the same operating conditions.</p></article></div><article><h3>Save and Export</h3><label>Plan name<input id="plan-name" placeholder="Untitled link"></label><label>Experiment notes<textarea id="notes" rows="3"></textarea></label><div class="actions"><button class="primary" id="save">Save as New Plan</button><button id="pdf">PDF Report / Print</button></div><p class="hint">Plans are stored only in this browser and do not sync across devices. For a PDF, choose "Save as PDF" in the print dialog.</p></article></div><p class="assumptions">Free-space, fixed-gain model; shadowing, fading, interference, saturation and near-field effects are not included. Maximum distance is derived from sensitivity and required margin, not from the SNR target. EIRP is an equivalent power, not a value measured at a physical connector; meeting the power target does not guarantee a usable link.</p></section><section id="power" class="page" hidden><p class="eyebrow">POWER CONVERTER</p><h1>Power Converter</h1><div class="two-col"><article><label>Direction<select id="power-direction"><option value="watts">dBm → W</option><option value="dbm">W → dBm</option></select></label><label id="power-label" for="power-input">Input power (dBm)</label><input id="power-input" inputmode="decimal" placeholder="e.g. 30"><button id="power-clear">Clear</button></article><article class="result" id="power-result" aria-live="polite"></article></div><article><h3>Formulas</h3><p class="mono">W = 10^((dBm − 30) / 10)<br>dBm = 10 log₁₀(W) + 30</p><p>0 dBm = 0.001 W · 30 dBm = 1 W · 40 dBm = 10 W</p></article></section><section id="doppler" class="page" hidden><p class="eyebrow">RF MOTION</p><h1>Doppler Shift</h1><div class="two-col"><article><label>Carrier frequency<div class="input-unit"><input id="doppler-frequency" inputmode="decimal" placeholder="e.g. 437"><select id="doppler-frequency-unit" aria-label="Carrier frequency unit"><option value="1">Hz</option><option value="1000000" selected>MHz</option><option value="1000000000">GHz</option></select></div></label><label>Radial velocity<div class="input-unit"><input id="doppler-speed" inputmode="decimal" placeholder="e.g. 7.5"><select id="doppler-speed-unit" aria-label="Radial velocity unit"><option value="1">m/s</option><option value="1000" selected>km/s</option></select></div></label><label>Direction of motion<select id="motion"><option value="-1">Approaching</option><option value="1">Receding</option></select></label><p class="hint">Enter the non-negative line-of-sight velocity, not the total orbital velocity.</p><button id="doppler-clear">Clear</button></article><article class="result" id="doppler-result" aria-live="polite"></article></div><article><h3>One-way, first-order approximation</h3><p class="mono">Δf ≈ −f₀ × vᵣ / c<br>fᵣ = f₀ + Δf</p><p class="hint">c = 299,792,458 m/s; vᵣ is positive when receding. Valid for speeds far below the speed of light; the input limit is 0.01c. Two-way radar, relativistic corrections and orbit tracking are not included.</p></article></section><section id="plans" class="page" hidden><p class="eyebrow">SAVED PLANS</p><h1>Saved Plans</h1><p>Select two plans to compare. Data is stored only in this browser.</p><div id="comparison"></div><div id="plan-list"></div></section></main><footer>LAB602 · RF TestFunction <span>RF engineering tools</span></footer><p id="notice" role="status" hidden></p><section id="print-report"></section></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="LAB602 RF tools: link budget, FSPL, power conversion, Doppler shift and plan analysis.">
+    <title>RF TestFunction · LAB602</title>
+    <link rel="icon" href="./logo.png">
+    <link rel="stylesheet" href="./style.css">
+    <script type="module" src="./app.mjs"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to main content</a>
+    <header>
+      <div class="brand">
+        <img src="./logo.png" alt="LAB602" width="46" height="46">
+        <div>LAB602 <strong>RF TestFunction</strong></div>
+      </div>
+      <label class="theme">Appearance
+        <select id="theme">
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </label>
+    </header>
+    <nav aria-label="Main tools">
+      <button data-tab="budget" aria-current="page">Link Budget</button>
+      <button data-tab="power">Power Converter</button>
+      <button data-tab="doppler">Doppler Shift</button>
+      <button data-tab="plans">Saved Plans <span id="count">0</span></button>
+    </nav>
+
+    <main id="main">
+      <!-- Link Budget (fields are generated by budget.mjs) -->
+      <section id="budget" class="page">
+        <div class="heading">
+          <div>
+            <p class="eyebrow">LINK BUDGET</p>
+            <h1>RF Link Budget</h1>
+            <p>Follow the power from transmitter to receiver and check the design margin at every stage.</p>
+          </div>
+          <div class="settings">
+            <label><input type="checkbox" id="animation" checked> Calculation animation</label>
+            <label><input type="checkbox" id="haptics"> Haptic feedback (supported devices)</label>
+          </div>
+        </div>
+        <div class="workspace">
+          <form id="budget-form" novalidate>
+            <article>
+              <h2>01 <span>Propagation</span></h2>
+              <div id="propagation" class="fields"></div>
+            </article>
+            <article>
+              <h2>02 <span>Power &amp; Antennas</span></h2>
+              <div id="antenna" class="fields"></div>
+            </article>
+            <details>
+              <summary>RX amplifier and cable losses</summary>
+              <div id="losses" class="fields"></div>
+              <p class="hint">TX: transmitter → cable → antenna<br>RX: antenna → cable → amplifier → receiver. Enter 0 dB if there is no amplifier.</p>
+            </details>
+            <article>
+              <h2>03 <span>Receiver Requirements</span></h2>
+              <div id="requirements" class="fields"></div>
+              <p class="hint">Sensitivity is referenced to the receiver input after the external amplifier.</p>
+            </article>
+            <p id="error" role="alert" class="error"></p>
+            <div class="actions">
+              <button class="primary" type="submit">Calculate Link Budget</button>
+              <button type="button" id="clear">Clear</button>
+              <button type="button" id="undo" hidden>Undo Clear</button>
+            </div>
+          </form>
+          <div>
+            <article id="result" class="result" aria-live="polite">
+              <p class="eyebrow">LINK PERFORMANCE</p>
+              <h2>Awaiting calculation</h2>
+              <p>Enter the parameters, then press "Calculate Link Budget".</p>
+            </article>
+            <article id="breakdown" hidden></article>
+          </div>
+        </div>
+
+        <div id="analysis" hidden>
+          <div class="heading">
+            <div>
+              <p class="eyebrow">LINK ANALYSIS</p>
+              <h2>Distance, Noise and Measurement Analysis</h2>
+            </div>
+            <span id="calculated-at" class="hint"></span>
+          </div>
+          <details>
+            <summary>Input snapshot for this calculation</summary>
+            <div id="snapshot-inputs"></div>
+          </details>
+          <article>
+            <div class="heading">
+              <h3>Distance and Coverage</h3>
+              <strong id="max-distance"></strong>
+            </div>
+            <div id="chart"></div>
+            <p class="legend">
+              <span>━━ Predicted power</span>
+              <span>┄ Sensitivity</span>
+              <span>┄ Sensitivity + required margin</span>
+            </p>
+            <label for="distance-slider">Inspect distance (log scale)</label>
+            <input id="distance-slider" type="range" step="any">
+            <p id="distance-readout" class="mono"></p>
+          </article>
+          <div class="two-col">
+            <article>
+              <h3>Noise and SNR</h3>
+              <div id="noise-fields" class="fields"></div>
+              <div id="noise-results" aria-live="polite"></div>
+              <p class="hint">290 K: noise = −173.975 + 10 log₁₀(BW) + NF. The total system NF must include the RX cable, amplifier and receiver, referred to the RX antenna output; do not enter the amplifier NF alone.</p>
+            </article>
+            <article>
+              <h3>Measured vs. Predicted</h3>
+              <label>Measured receiver input (dBm)<input id="measured" inputmode="decimal" placeholder="Optional"></label>
+              <p id="measurement" aria-live="polite"></p>
+              <p class="hint">Measure at the receiver input after the RX amplifier, under the same operating conditions.</p>
+            </article>
+          </div>
+          <article>
+            <h3>Save and Export</h3>
+            <label>Plan name<input id="plan-name" placeholder="Untitled link"></label>
+            <label>Experiment notes<textarea id="notes" rows="3"></textarea></label>
+            <div class="actions">
+              <button class="primary" id="save">Save as New Plan</button>
+              <button id="pdf">PDF Report / Print</button>
+            </div>
+            <p class="hint">Plans are stored only in this browser and do not sync across devices. For a PDF, choose "Save as PDF" in the print dialog.</p>
+          </article>
+        </div>
+        <!-- Also copied into the printed report: keep on one line. -->
+        <p class="assumptions">Free-space, fixed-gain model; shadowing, fading, interference, saturation and near-field effects are not included. Maximum distance is derived from sensitivity and required margin, not from the SNR target. EIRP is an equivalent power, not a value measured at a physical connector; meeting the power target does not guarantee a usable link.</p>
+      </section>
+
+      <!-- Power Converter -->
+      <section id="power" class="page" hidden>
+        <p class="eyebrow">POWER CONVERTER</p>
+        <h1>Power Converter</h1>
+        <div class="two-col">
+          <article>
+            <label>Direction<select id="power-direction">
+                <option value="watts">dBm → W</option>
+                <option value="dbm">W → dBm</option>
+              </select></label>
+            <label id="power-label" for="power-input">Input power (dBm)</label>
+            <input id="power-input" inputmode="decimal" placeholder="e.g. 30">
+            <button id="power-clear">Clear</button>
+          </article>
+          <article class="result" id="power-result" aria-live="polite"></article>
+        </div>
+        <article>
+          <h3>Formulas</h3>
+          <p class="mono">W = 10^((dBm − 30) / 10)<br>dBm = 10 log₁₀(W) + 30</p>
+          <p>0 dBm = 0.001 W · 30 dBm = 1 W · 40 dBm = 10 W</p>
+        </article>
+      </section>
+
+      <!-- Doppler Shift -->
+      <section id="doppler" class="page" hidden>
+        <p class="eyebrow">RF MOTION</p>
+        <h1>Doppler Shift</h1>
+        <div class="two-col">
+          <article>
+            <label>Carrier frequency<div class="input-unit">
+                <input id="doppler-frequency" inputmode="decimal" placeholder="e.g. 437">
+                <select id="doppler-frequency-unit" aria-label="Carrier frequency unit">
+                  <option value="1">Hz</option>
+                  <option value="1000000" selected>MHz</option>
+                  <option value="1000000000">GHz</option>
+                </select>
+              </div></label>
+            <label>Radial velocity<div class="input-unit">
+                <input id="doppler-speed" inputmode="decimal" placeholder="e.g. 7.5">
+                <select id="doppler-speed-unit" aria-label="Radial velocity unit">
+                  <option value="1">m/s</option>
+                  <option value="1000" selected>km/s</option>
+                </select>
+              </div></label>
+            <label>Direction of motion<select id="motion">
+                <option value="-1">Approaching</option>
+                <option value="1">Receding</option>
+              </select></label>
+            <p class="hint">Enter the non-negative line-of-sight velocity, not the total orbital velocity.</p>
+            <button id="doppler-clear">Clear</button>
+          </article>
+          <article class="result" id="doppler-result" aria-live="polite"></article>
+        </div>
+        <article>
+          <h3>One-way, first-order approximation</h3>
+          <p class="mono">Δf ≈ −f₀ × vᵣ / c<br>fᵣ = f₀ + Δf</p>
+          <p class="hint">c = 299,792,458 m/s; vᵣ is positive when receding. Valid for speeds far below the speed of light; the input limit is 0.01c. Two-way radar, relativistic corrections and orbit tracking are not included.</p>
+        </article>
+      </section>
+
+      <!-- Saved Plans (rendered by plans.mjs) -->
+      <section id="plans" class="page" hidden>
+        <p class="eyebrow">SAVED PLANS</p>
+        <h1>Saved Plans</h1>
+        <p>Select two plans to compare. Data is stored only in this browser.</p>
+        <div id="comparison"></div>
+        <div id="plan-list"></div>
+      </section>
+    </main>
+
+    <footer>LAB602 · RF TestFunction <span>RF engineering tools</span></footer>
+    <p id="notice" role="status" hidden></p>
+    <section id="print-report"></section>
+  </body>
+</html>
