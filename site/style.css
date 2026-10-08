@@ -653,6 +653,10 @@ button:disabled {
   font-size: 12px;
 }
 
+.chart svg.compact {
+  min-height: 0;
+}
+
 .chart.constellation svg {
   max-width: 460px;
   margin: auto;

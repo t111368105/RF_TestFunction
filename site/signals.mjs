@@ -181,3 +181,40 @@ export function theoreticalBer(scheme, ebn0dB) {
   if (scheme === '8psk') return (2 / k) * qFunction(Math.sqrt(2 * k * g) * Math.sin(Math.PI / M));
   return (4 / k) * (1 - 1 / Math.sqrt(M)) * qFunction(Math.sqrt((3 * k * g) / (M - 1)));
 }
+
+// ---------------------------------------------------------------- noise floor
+
+const KT0 = -173.975; // dBm/Hz, thermal noise density at 290 K
+const T0 = 290;
+
+/** Noise power (dBm) at temperature tempK in a bandwidth of bandwidthHz. */
+export const noisePower = (tempK, bandwidthHz) => KT0 + 10 * Math.log10(tempK / T0) + 10 * Math.log10(bandwidthHz);
+
+/**
+ * The noise floor referred to the antenna output: antenna noise k·Ta·B, the receiver's own noise
+ * k·Te·B with Te = 290 K·(F − 1), and their total k·(Ta + Te)·B, all in dBm, plus the temperatures.
+ */
+export function noiseFloor(antennaK, nfDb, bandwidthHz) {
+  const receiverK = T0 * (10 ** (nfDb / 10) - 1);
+  const systemK = antennaK + receiverK;
+  return {
+    receiverK,
+    systemK,
+    antenna: antennaK > 0 ? noisePower(antennaK, bandwidthHz) : -Infinity,
+    receiver: receiverK > 0 ? noisePower(receiverK, bandwidthHz) : -Infinity,
+    total: noisePower(systemK, bandwidthHz),
+    density: KT0 + 10 * Math.log10(systemK / T0),
+  };
+}
+
+// A log-averaged (video-averaged) noise reading on a spectrum analyzer is low by about 2.51 dB.
+export const LOG_AVERAGE_CORRECTION = 2.51;
+
+/**
+ * A spectrum analyzer noise reading (dBm in the resolution bandwidth rbwHz) as a density (dBm/Hz),
+ * the power in bandwidthHz and the equivalent noise temperature (K).
+ */
+export function fromAnalyzerReading(readingDbm, rbwHz, bandwidthHz, logAveraged) {
+  const density = readingDbm - 10 * Math.log10(rbwHz) + (logAveraged ? LOG_AVERAGE_CORRECTION : 0);
+  return { density, power: density + 10 * Math.log10(bandwidthHz), temperatureK: T0 * 10 ** ((density - KT0) / 10) };
+}

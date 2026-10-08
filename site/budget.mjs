@@ -25,6 +25,7 @@ import { attachHelp } from './help.mjs';
 import { initSlant, currentOrbit } from './slant.mjs';
 import { initPass, showPass, showAvailability } from './pass.mjs';
 import { skyTemperature } from './satellite.mjs';
+import { noisePower } from './signals.mjs';
 import { t, locale } from './i18n.mjs';
 
 const COUNT = labels.length;
@@ -465,9 +466,10 @@ function updateAnalysis() {
   syncMeta();
   const partsValid = updateNoiseFigure();
   const v = snapshot.values;
+  const bandwidth = number(snapshot.bandwidth) * number(snapshot.bandwidthUnit);
   const n = noise(
     v,
-    number(snapshot.bandwidth) * number(snapshot.bandwidthUnit),
+    bandwidth,
     number(snapshot.noiseFigure),
     number(snapshot.requiredSNR),
     antennaTemp(),
@@ -477,6 +479,10 @@ function updateAnalysis() {
         [t('Item'), t('Result')],
         [
           [t('System noise temperature'), `${fmt(n.tsys, 1)} K`],
+          [
+            t('Antenna noise kTₐB'),
+            antennaTemp() > 0 ? `${fmt(noisePower(antennaTemp(), bandwidth))} dBm (${fmt(antennaTemp(), 1)} K)` : '—',
+          ],
           [t('Input-referred noise'), fmt(n.floor) + ' dBm'],
           [t('Estimated SNR'), fmt(n.snr) + ' dB'],
           [t('SNR margin'), fmt(n.margin) + ' dB'],

@@ -116,6 +116,9 @@ FORMULAS = {
     "learn-bits": r"k = \log_2 M, \quad \frac{E_s}{N_0} = k \frac{E_b}{N_0}",
     "learn-ber-psk": r"P_b^{\text{BPSK, QPSK}} = Q\left(\sqrt{2 E_b / N_0}\right), \quad P_b^{M\text{-PSK}} \approx \frac{2}{k} Q\left(\sqrt{2 k E_b / N_0} \sin\frac{\pi}{M}\right)",
     "learn-ber-qam": r"P_b^{M\text{-QAM}} \approx \frac{4}{k}\left(1 - \frac{1}{\sqrt{M}}\right) Q\left(\sqrt{\frac{3 k}{M - 1} \frac{E_b}{N_0}}\right)",
+    "learn-noise": r"N = k T B, \quad N_{\text{dBm}} = -174 + 10 \log_{10} \frac{T}{290\ \text{K}} + 10 \log_{10} B",
+    "learn-tsys": r"T_{\text{sys}} = T_a + T_e, \quad T_e = 290\ \text{K} \cdot (F - 1)",
+    "learn-analyzer": r"N_0 = P_{\text{RBW}} - 10 \log_{10} \text{RBW} \; (+2.5\ \text{dB}), \quad N = N_0 + 10 \log_{10} B",
 }
 
 MARKER = re.compile(r"<!-- eq:([\w-]+) -->.*?<!-- /eq -->", re.S)

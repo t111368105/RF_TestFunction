@@ -13,8 +13,12 @@ import {
   theoreticalBer,
   random,
   gaussian,
+  noisePower,
+  noiseFloor,
+  fromAnalyzerReading,
 } from './signals.mjs';
 import { $, fmt, esc, table, read, write } from './ui.mjs';
+import { number } from './calculations.mjs';
 import { t } from './i18n.mjs';
 
 const C = 299792458;
@@ -400,6 +404,110 @@ function drawConstellation() {
   );
 }
 
+// ---------------------------------------------------------------- 6. the noise floor
+
+const BANDWIDTHS = [
+  [1e3, '1 kHz'],
+  [1e4, '10 kHz'],
+  [1e5, '100 kHz'],
+  [1e6, '1 MHz'],
+  [1e7, '10 MHz'],
+  [1e8, '100 MHz'],
+];
+
+/** Horizontal bars of noise powers (dBm), the longest for the strongest. */
+function noiseBars(rows) {
+  const width = 640;
+  const L = 210;
+  const R = width - 70;
+  const finite = rows.filter(([, v]) => Number.isFinite(v)).map(([, v]) => v);
+  const lo = Math.floor((Math.min(...finite) - 6) / 10) * 10;
+  const hi = Math.ceil((Math.max(...finite) + 2) / 10) * 10;
+  const px = (v) => L + ((v - lo) / (hi - lo)) * (R - L);
+  const rowH = 34;
+  const height = rows.length * rowH + 40;
+  let svg = `<svg class="compact" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(t('Noise powers in the receiver bandwidth'))}">`;
+  for (let v = lo; v <= hi; v += 10) {
+    svg += `<line class="grid" x1="${px(v)}" x2="${px(v)}" y1="8" y2="${height - 28}"/><text x="${px(v)}" y="${height - 10}" text-anchor="middle">${v}${v === hi ? ' dBm' : ''}</text>`;
+  }
+  rows.forEach(([label, v, color], n) => {
+    const y = 10 + n * rowH;
+    svg += `<text x="${L - 8}" y="${y + 17}" text-anchor="end">${esc(label)}</text>`;
+    if (Number.isFinite(v)) {
+      svg +=
+        `<rect x="${L}" y="${y + 4}" width="${Math.max(1, px(v) - L)}" height="${rowH - 12}" rx="4" fill="var(--${color})" opacity=".85"/>` +
+        `<text x="${px(v) + 6}" y="${y + 17}">${fmt(v, 1)}</text>`;
+    }
+  });
+  return svg + '</svg>';
+}
+
+/** One bar split into the antenna's and the receiver's share of the system noise temperature. */
+function temperatureSplit(antennaK, receiverK) {
+  const width = 640;
+  const L = 20;
+  const R = width - 20;
+  const total = antennaK + receiverK;
+  const split = L + (antennaK / total) * (R - L);
+  const pct = (x) => `${fmt((100 * x) / total, 0)} %`;
+  return (
+    `<svg class="compact" viewBox="0 0 ${width} 74" role="img" aria-label="${esc(t('Share of the system noise temperature'))}">` +
+    `<rect x="${L}" y="8" width="${split - L}" height="28" fill="var(--green)" opacity=".85"/>` +
+    `<rect x="${split}" y="8" width="${R - split}" height="28" fill="var(--orange)" opacity=".85"/>` +
+    `<text x="${L}" y="58">${esc(t('Antenna {share}', { share: pct(antennaK) }))}</text>` +
+    `<text x="${R}" y="58" text-anchor="end">${esc(t('Receiver {share}', { share: pct(receiverK) }))}</text></svg>`
+  );
+}
+
+function drawNoise() {
+  const preset = $('noise-preset').value;
+  if (preset && $('noise-ta').value !== preset) {
+    $('noise-ta').value = preset;
+    showOutputs($('learn-noise'));
+  }
+  const ta = value('noise-ta');
+  const nf = value('noise-nf');
+  const bw = Number($('noise-bw').value);
+  const n = noiseFloor(ta, nf, bw);
+  $('noise-chart').innerHTML = noiseBars([
+    [t('Reference kT₀B (290 K)'), noisePower(290, bw), 'muted'],
+    [t('Antenna noise kTₐB'), n.antenna, 'green'],
+    [t('Receiver noise kTₑB'), n.receiver, 'orange'],
+    [t('Noise floor k(Tₐ + Tₑ)B'), n.total, 'blue'],
+  ]);
+  $('noise-split').innerHTML = temperatureSplit(ta, n.receiverK);
+  $('noise-readout').innerHTML = table(
+    [t('Quantity'), t('Value')],
+    [
+      [t('Receiver noise temperature Tₑ'), `${fmt(n.receiverK, 1)} K`],
+      [t('System noise temperature Tₛᵧₛ'), `${fmt(n.systemK, 1)} K`],
+      [t('Noise density'), `${fmt(n.density, 2)} dBm/Hz`],
+      [t('Noise floor in the bandwidth'), `${fmt(n.total, 2)} dBm`],
+      [t('A signal for an SNR of 10 dB'), `${fmt(n.total + 10, 2)} dBm`],
+    ],
+  );
+  drawMeasurement(n);
+}
+
+function drawMeasurement(model) {
+  const reading = number($('meas-reading').value);
+  if (!Number.isFinite(reading)) {
+    $('meas-readout').innerHTML = `<p class="error">${t('Enter the noise level read on the analyzer in dBm.')}</p>`;
+    return;
+  }
+  const bw = Number($('noise-bw').value);
+  const m = fromAnalyzerReading(reading, Number($('meas-rbw').value), bw, $('meas-log').checked);
+  $('meas-readout').innerHTML = table(
+    [t('Quantity'), t('Value')],
+    [
+      [t('Noise density'), `${fmt(m.density, 2)} dBm/Hz`],
+      [t('Noise in the receiver bandwidth above'), `${fmt(m.power, 2)} dBm`],
+      [t('Equivalent noise temperature'), `${fmt(m.temperatureK, 0)} K`],
+      [t('Compared with the noise floor above'), `${m.power - model.total >= 0 ? '+' : ''}${fmt(m.power - model.total, 2)} dB`],
+    ],
+  );
+}
+
 // ---------------------------------------------------------------- wiring
 
 const DEMOS = [
@@ -408,10 +516,16 @@ const DEMOS = [
   ['learn-sampling', drawSampling],
   ['learn-modulation', drawModulation],
   ['learn-constellation', drawConstellation],
+  ['learn-noise', drawNoise],
 ];
 
 export function initLearn() {
   $('wave-rf').innerHTML = RF_EXAMPLES.map(([f, name]) => `<option value="${f}">${esc(t(name))} (${frequencyLabel(f)})</option>`).join('');
+  const bandwidths = BANDWIDTHS.map(([v, label]) => `<option value="${v}">${label}</option>`).join('');
+  $('noise-bw').innerHTML = bandwidths;
+  $('noise-bw').value = '1000000';
+  $('meas-rbw').innerHTML = bandwidths;
+  $('meas-rbw').value = '100000';
   $('const-scheme').innerHTML = Object.entries(SCHEMES)
     .map(([key, s]) => `<option value="${key}">${s.name}</option>`)
     .join('');
@@ -436,6 +550,10 @@ export function initLearn() {
     showOutputs(root);
     draw();
   }
+  // Moving the temperature by hand leaves the preset for Custom; this runs before the redraw.
+  $('noise-ta').addEventListener('input', () => {
+    if ($('noise-preset').value !== $('noise-ta').value) $('noise-preset').value = '';
+  });
   $('const-random').onclick = () => {
     const k = Math.log2(SCHEMES[$('const-scheme').value].M);
     $('const-bits').value = randomBits(8 * k);

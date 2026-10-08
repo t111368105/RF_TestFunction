@@ -12,6 +12,9 @@ import {
   minimumDistance,
   simulate,
   theoreticalBer,
+  noisePower,
+  noiseFloor,
+  fromAnalyzerReading,
 } from '../site/signals.mjs';
 
 const near = (a, b, tol) => assert.ok(Math.abs(a - b) <= tol, `${a} != ${b}`);
@@ -88,4 +91,26 @@ test('Simulated bit error rates agree with theory', () => {
     const sim = simulate(scheme, ebn0, 100000, 11).ber;
     assert.ok(Math.abs(sim - theory) < 0.1 * theory, `${scheme}: ${sim} vs ${theory}`);
   }
+});
+
+test('The noise floor adds the antenna and receiver noise temperatures', () => {
+  // kTB at 290 K in 1 MHz.
+  near(noisePower(290, 1e6), -113.975, 1e-9);
+  // 290 K antenna and NF 3 dB: the receiver adds about as much again (288.6 K).
+  const n = noiseFloor(290, 3, 1e6);
+  near(n.receiverK, 290 * (10 ** 0.3 - 1), 1e-9);
+  near(n.total, -113.975 + 10 * Math.log10((290 + n.receiverK) / 290), 1e-9);
+  near(n.density, n.total - 60, 1e-9);
+  // A 50 K sky with a noiseless receiver: 10 log(50/290) below kT0B.
+  near(noiseFloor(50, 0, 1e6).total, -113.975 + 10 * Math.log10(50 / 290), 1e-9);
+  assert.equal(noiseFloor(50, 0, 1e6).receiver, -Infinity);
+});
+
+test('Spectrum analyzer readings convert to a noise density and temperature', () => {
+  const m = fromAnalyzerReading(-124, 1e5, 1e6, false);
+  near(m.density, -174, 1e-9);
+  near(m.power, -114, 1e-9);
+  near(m.temperatureK, 290 * 10 ** ((-174 + 173.975) / 10), 1e-9);
+  // Log averaging reads 2.51 dB low.
+  near(fromAnalyzerReading(-124, 1e5, 1e6, true).density, -171.49, 1e-9);
 });

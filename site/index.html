@@ -605,6 +605,7 @@
           <a href="#learn-sampling">3. Sampling and Aliasing</a>
           <a href="#learn-modulation">4. Analog Modulation: AM and FM</a>
           <a href="#learn-constellation">5. Digital Modulation and Constellations</a>
+          <a href="#learn-noise">6. The Noise Floor</a>
         </nav>
 
         <article id="learn-wave" class="learn">
@@ -746,6 +747,50 @@
             <!-- eq:learn-ber-psk --><div class="eq"><math display="block"><mrow><msubsup><mi>P</mi><mi>b</mi><mrow><mtext>BPSK,&#x000A0;QPSK</mtext></mrow></msubsup><mo>&#x0003D;</mo><mi>Q</mi><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><msqrt><mrow><mn>2</mn><msub><mi>E</mi><mi>b</mi></msub><mo>&#x0002F;</mo><msub><mi>N</mi><mn>0</mn></msub></mrow></msqrt><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mo>&#x0002C;</mo><mspace width="1em" /><msubsup><mi>P</mi><mi>b</mi><mrow><mi>M</mi><mtext>-PSK</mtext></mrow></msubsup><mo>&#x02248;</mo><mfrac><mrow><mn>2</mn></mrow><mrow><mi>k</mi></mrow></mfrac><mi>Q</mi><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><msqrt><mrow><mn>2</mn><mi>k</mi><msub><mi>E</mi><mi>b</mi></msub><mo>&#x0002F;</mo><msub><mi>N</mi><mn>0</mn></msub></mrow></msqrt><mi>sin</mi><mspace width="0.167em" /><mfrac><mrow><mi>&#x003C0;</mi></mrow><mrow><mi>M</mi></mrow></mfrac><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow></mrow></math></div><!-- /eq -->
             <!-- eq:learn-ber-qam --><div class="eq"><math display="block"><mrow><msubsup><mi>P</mi><mi>b</mi><mrow><mi>M</mi><mtext>-QAM</mtext></mrow></msubsup><mo>&#x02248;</mo><mfrac><mrow><mn>4</mn></mrow><mrow><mi>k</mi></mrow></mfrac><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mn>1</mn><mo>&#x02212;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><msqrt><mrow><mi>M</mi></mrow></msqrt></mrow></mfrac><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mi>Q</mi><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><msqrt><mrow><mfrac><mrow><mn>3</mn><mi>k</mi></mrow><mrow><mi>M</mi><mo>&#x02212;</mo><mn>1</mn></mrow></mfrac><mfrac><mrow><msub><mi>E</mi><mi>b</mi></msub></mrow><mrow><msub><mi>N</mi><mn>0</mn></msub></mrow></mfrac></mrow></msqrt><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow></mrow></math></div><!-- /eq -->
             <p class="caption">M: number of points; E<sub>s</sub>, E<sub>b</sub>: energy per symbol and per bit; N<sub>0</sub>: noise density; Q: Gaussian tail probability. The BPSK and QPSK error rate is exact; the 8PSK and square QAM ones are the usual approximations with Gray coding. The required Eb/N₀ in the link budget's data rate section comes from curves like these.</p>
+          </div>
+        </article>
+
+        <article id="learn-noise" class="learn">
+          <h3>6. The Noise Floor</h3>
+          <p>Even with no signal, a receiver sees noise. The antenna picks up thermal noise from whatever it looks at, measured as its <strong>antenna noise temperature</strong> T<sub>a</sub>: about 290 K facing the ground or buildings, as little as 10–50 K for a dish facing a clear sky. The receiver adds its own noise, set by its <strong>noise figure</strong>. Their sum, over the receiver bandwidth, is the <strong>noise floor</strong>: a signal must rise above it by the required SNR to be decoded. A wider bandwidth collects more noise.</p>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <label for="noise-preset">What the antenna sees<select id="noise-preset">
+                  <option value="">Custom</option>
+                  <option value="30">Dish to a clear sky, high elevation (30 K)</option>
+                  <option value="100">Low elevation, near the horizon (100 K)</option>
+                  <option value="275">Sky in heavy rain (275 K)</option>
+                  <option value="290">Ground, buildings or a terrestrial link (290 K)</option>
+                  <option value="3000">VHF in a town, man-made noise (3000 K)</option>
+                </select></label>
+              <label for="noise-ta">Antenna noise temperature T<sub>a</sub> <output id="noise-ta-out"></output><input type="range" id="noise-ta" min="1" max="3000" step="1" value="290" data-unit="K"></label>
+              <label for="noise-nf">Receiver noise figure NF <output id="noise-nf-out"></output><input type="range" id="noise-nf" min="0" max="15" step="0.1" value="3" data-unit="dB"></label>
+              <label for="noise-bw">Receiver bandwidth B<select id="noise-bw"></select></label>
+            </div>
+            <div class="learn-plots">
+              <div id="noise-chart" class="chart"></div>
+              <div id="noise-split" class="chart"></div>
+              <div id="noise-readout"></div>
+            </div>
+          </div>
+          <h4>From a spectrum analyzer reading</h4>
+          <p>Connect the antenna to a spectrum analyzer with no signal present. The analyzer shows the noise in its resolution bandwidth (RBW), so convert the reading to a density first. Terminate the input with 50 Ω and read again: if the level barely changes with the antenna connected, the analyzer's own noise hides the antenna noise, so turn on its preamplifier or add an LNA at the antenna.</p>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <label for="meas-reading">Noise reading<div class="input-unit"><input id="meas-reading" inputmode="decimal" value="-121"><span>dBm</span></div></label>
+              <label for="meas-rbw">Resolution bandwidth RBW<select id="meas-rbw"></select></label>
+              <label class="check"><input type="checkbox" id="meas-log"> Log-averaged reading (no noise marker)</label>
+            </div>
+            <div class="learn-plots">
+              <div id="meas-readout"></div>
+            </div>
+          </div>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:learn-noise --><div class="eq"><math display="block"><mrow><mi>N</mi><mo>&#x0003D;</mo><mi>k</mi><mi>T</mi><mi>B</mi><mo>&#x0002C;</mo><mspace width="1em" /><msub><mi>N</mi><mrow><mtext>dBm</mtext></mrow></msub><mo>&#x0003D;</mo><mo>&#x02212;</mo><mn>174</mn><mo>&#x0002B;</mo><mn>10</mn><msub><mi>log</mi><mrow><mn>10</mn></mrow></msub><mspace width="0.167em" /><mfrac><mrow><mi>T</mi></mrow><mrow><mn>290</mn><mtext>&#x000A0;</mtext><mtext>K</mtext></mrow></mfrac><mo>&#x0002B;</mo><mn>10</mn><msub><mi>log</mi><mrow><mn>10</mn></mrow></msub><mspace width="0.167em" /><mi>B</mi></mrow></math></div><!-- /eq -->
+            <!-- eq:learn-tsys --><div class="eq"><math display="block"><mrow><msub><mi>T</mi><mrow><mtext>sys</mtext></mrow></msub><mo>&#x0003D;</mo><msub><mi>T</mi><mi>a</mi></msub><mo>&#x0002B;</mo><msub><mi>T</mi><mi>e</mi></msub><mo>&#x0002C;</mo><mspace width="1em" /><msub><mi>T</mi><mi>e</mi></msub><mo>&#x0003D;</mo><mn>290</mn><mtext>&#x000A0;</mtext><mtext>K</mtext><mo>&#x000B7;</mo><mo stretchy="false">&#x00028;</mo><mi>F</mi><mo>&#x02212;</mo><mn>1</mn><mo stretchy="false">&#x00029;</mo></mrow></math></div><!-- /eq -->
+            <!-- eq:learn-analyzer --><div class="eq"><math display="block"><mrow><msub><mi>N</mi><mn>0</mn></msub><mo>&#x0003D;</mo><msub><mi>P</mi><mrow><mtext>RBW</mtext></mrow></msub><mo>&#x02212;</mo><mn>10</mn><msub><mi>log</mi><mrow><mn>10</mn></mrow></msub><mspace width="0.167em" /><mtext>RBW</mtext><mspace width="0.278em" /><mo stretchy="false">&#x00028;</mo><mo>&#x0002B;</mo><mn>2.5</mn><mtext>&#x000A0;</mtext><mtext>dB</mtext><mo stretchy="false">&#x00029;</mo><mo>&#x0002C;</mo><mspace width="1em" /><mi>N</mi><mo>&#x0003D;</mo><msub><mi>N</mi><mn>0</mn></msub><mo>&#x0002B;</mo><mn>10</mn><msub><mi>log</mi><mrow><mn>10</mn></mrow></msub><mspace width="0.167em" /><mi>B</mi></mrow></math></div><!-- /eq -->
+            <p class="caption">k = 1.380649 × 10<sup>−23</sup> J/K; −174 dBm/Hz is kT at 290 K. T<sub>e</sub>: noise temperature the receiver adds, from its noise figure F (linear). Log averaging reads noise about 2.5 dB low; a noise marker corrects it. In the Link Budget, the same calculation is under Noise and SNR, with an estimator of the antenna temperature from the sky.</p>
           </div>
         </article>
       </section>
