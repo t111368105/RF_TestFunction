@@ -98,6 +98,14 @@ const HELP = {
   'sky-atten': 'Atmospheric attenuation on the path at the same time percentage, excluding scintillation: the Atmospheric and rain loss plus the Cloud and fog loss. The button takes them from the calculation.',
   'sky-tmr': 'Effective temperature of the atmosphere that emits the noise. Unknown: 275 K (ITU-R P.618).',
   'sky-ground': 'Noise from the warm ground picked up through the sidelobes and spillover. Unknown: 0 for a high-gain dish at high elevation; 10 to 50 K for a small or wide-beam antenna, or at low elevation.',
+  // Receiver noise and requirements
+  v8: 'From the receiver datasheet, at the receiver input, for the bandwidth and modulation used. Leave blank to use the sensitivity the noise settings and the required SNR imply, which counts the antenna noise.',
+  requiredSNR: 'SNR the demodulator needs for the target error rate. Unknown: about 10 dB for BPSK, 13 dB for QPSK, 20 dB for 16QAM, 26 dB for 64QAM (uncoded, bit error rate near 10⁻⁵).',
+  bandwidth: "Receiver noise bandwidth, about the signal's occupied bandwidth (or the receiver filter). A wider bandwidth collects more noise. Unknown: the channel bandwidth of the radio.",
+  'antenna-temp': 'Noise temperature of what the antenna sees. Blank: 290 K, for antennas facing the ground or buildings. A dish facing a clear sky: 30 to 50 K; use the estimator below for rain and the atmosphere.',
+  noiseFigure: "Noise figure of the whole receive chain, referred to the RX antenna output: RX cable, amplifier and receiver together. Tick the box above to calculate it from the parts. Unknown: the receiver's datasheet NF plus the RX cable loss.",
+  'amp-nf': 'Noise figure of the RX amplifier (LNA), from its datasheet; typically 0.5 to 2 dB.',
+  'rx-nf': 'Noise figure of the receiver itself, from its datasheet; typically 3 to 10 dB.',
 };
 
 /** Adds each field's help under it. Run once the generated fields exist. */

@@ -12,6 +12,7 @@ import {
   convertPower,
   inputWarnings,
   partialBudget,
+  noiseDensity,
   DBD_TO_DBI,
 } from './calculations.mjs';
 import {
@@ -146,8 +147,55 @@ let undo = null; // Form state before the last Clear.
 const unitResets = []; // Re-sync unit converters after values are set programmatically.
 
 function persist() {
-  write('rf.inputs', Object.fromEntries(draftIds.map((id) => [id, $(id).value])));
+  write('rf.inputs', {
+    ...Object.fromEntries([...draftIds, ...META.map(([id]) => id)].map((id) => [id, $(id).value])),
+    'nf-from-parts': $('nf-from-parts').checked,
+  });
 }
+
+/** The analysis fields in the form, as snapshot values. */
+function readMeta() {
+  return { ...Object.fromEntries(META.map(([id, key]) => [key, $(id).value])), nfFromParts: $('nf-from-parts').checked };
+}
+
+/**
+ * The noise settings in the form for link values v: bandwidth (Hz), system NF (from the parts when
+ * that box is ticked), required SNR and antenna temperature (blank: 290 K). NaN where invalid.
+ */
+function noiseSettings(v) {
+  const nf = $('nf-from-parts').checked
+    ? cascadeNF(v[7], v[5], number($('amp-nf').value), number($('rx-nf').value), $('amp-position').value === 'before')
+    : number($('noiseFigure').value);
+  const raw = $('antenna-temp').value.trim();
+  return {
+    bandwidth: number($('bandwidth').value) * number($('bandwidth-unit').value),
+    nf: nf ?? NaN,
+    snr: number($('requiredSNR').value),
+    ta: raw === '' ? 290 : number(raw),
+  };
+}
+
+/** Noise results for complete link values v, or null when the noise settings are invalid. */
+function noiseFor(v) {
+  const s = noiseSettings(v);
+  try {
+    return noise(v, s.bandwidth, s.nf, s.snr, s.ta);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The receiver sensitivity the noise settings imply, for a blank sensitivity field: the receiver
+ * input level that just meets the required SNR over the noise floor. Null if they are invalid.
+ */
+function snrSensitivity(v) {
+  const filled = [...v];
+  filled[8] = 0; // The sensitivity does not enter the power levels this needs.
+  return noiseFor(filled)?.sensitivity ?? null;
+}
+
+const sensitivityBlank = () => $('v8').value.trim() === '';
 
 function addUnitSelect(inputId, id, label, options, selected = options[0][0]) {
   const select = Object.assign(document.createElement('select'), {
@@ -206,12 +254,18 @@ function showIncomplete(message) {
   $('error').textContent = '';
   // What the inputs entered so far already give, such as the free-space loss from the frequency
   // and distance alone.
-  const partial = partialBudget(values());
+  const v = values();
+  const partial = partialBudget(v);
+  const n = noiseSettings(v);
+  const density = noiseDensity(n.nf, n.ta);
+  const floor = density && n.bandwidth > 0 ? density.n0 + 10 * Math.log10(n.bandwidth) : null;
   const metrics = [
     [t('Free-space loss'), partial.fspl, 'dB'],
     [t('EIRP'), partial.eirp, 'dBm'],
     [t('RX antenna output'), partial.received, 'dBm'],
     [t('Receiver input'), partial.output, 'dBm'],
+    [t('Noise floor'), Number.isFinite(floor) ? floor : null, 'dBm'],
+    [t('SNR'), Number.isFinite(floor) && partial.received !== null ? partial.received - floor : null, 'dB'],
   ]
     .filter(([, v]) => v !== null)
     .map(([l, v, u]) => `<div><small>${l}</small><strong>${fmt(v)} ${u}</strong></div>`)
@@ -268,11 +322,19 @@ function inputProblem() {
   // Checked one by one: a negative item could otherwise hide inside a positive total.
   if (lossValues().some((x) => !Number.isFinite(x) || x < 0)) return fieldProblem(10);
   const v = values();
+  const blank = sensitivityBlank();
+  if (blank) v[8] = 0; // Checked below against the noise settings instead.
   try {
     budget(v);
   } catch (err) {
     const i = invalidIndex(v);
     return i >= 0 ? fieldProblem(i) : { el: $('v0'), message: err.message };
+  }
+  if (blank && snrSensitivity(v) === null) {
+    return {
+      el: $('v8'),
+      message: t('Enter the receiver sensitivity, or leave it blank and set valid noise settings under 03 Receiver and the required SNR.'),
+    };
   }
   const eirpLimit = $('eirp-limit').value.trim();
   if (eirpLimit && !Number.isFinite(number(eirpLimit))) {
@@ -294,19 +356,21 @@ function compute({ live }) {
     return;
   }
   const v = values();
+  const fromSnr = sensitivityBlank();
+  if (fromSnr) v[8] = snrSensitivity(v);
   const estimate = currentEstimate(v[0], v[1]);
-  if (snapshot) syncMeta();
-  const kept = snapshot ? Object.fromEntries(CARRIED.map((key) => [key, snapshot[key]])) : carried;
+  // The measurements carry over; the analysis fields come from the form.
+  const kept = snapshot ? { measurements: snapshot.measurements, measureUnit: snapshot.measureUnit } : carried;
   // Cloned so editing this calculation never changes the loaded plan.
   snapshot = structuredClone({
     ...ANALYSIS_DEFAULTS,
     ...(loaded ?? {}),
-    name: loaded?.name ?? '',
-    notes: loaded?.notes ?? '',
     ...(kept ?? {}),
+    ...readMeta(),
     id: newId(),
     date: new Date().toISOString(),
     values: v,
+    sensitivityFromSnr: fromSnr,
     lossItems: Object.fromEntries(LOSS_ITEMS.map(({ key, id }) => [key, $(id).value.trim()])),
     ampPosition: $('amp-position').value,
     eirpLimit: $('eirp-limit').value.trim(),
@@ -400,30 +464,58 @@ function undoClear() {
 }
 
 function resultHtml(r) {
+  const n = noiseFor(snapshot.values);
   const metrics = [
     [t('Receiver input'), r.output, 'dBm'],
     [t('RX antenna output'), r.received, 'dBm'],
     [t('Free-space loss'), r.fspl, 'dB'],
     [t('Maximum distance'), r.maxDistance, 'km'],
+    ...(n
+      ? [
+          [t('Noise floor'), n.floor, 'dBm'],
+          [t('SNR'), n.snr, 'dB'],
+          [t('SNR margin'), n.margin, 'dB'],
+        ]
+      : []),
   ]
     .map(([l, v, u]) => `<div><small>${l}</small><strong>${fmt(v)} ${u}</strong></div>`)
     .join('');
+  const sensitivity = snapshot.sensitivityFromSnr
+    ? `<br><small>${t('Sensitivity {value} dBm, from the noise floor and the required SNR', { value: fmt(snapshot.values[8]) })}</small>`
+    : '';
   return (
     `<p class="eyebrow">${t('LINK PERFORMANCE')}</p>` +
     `<p class="status ${r.meets ? '' : 'warn'}">${r.status}</p>` +
     `<p>${t('Link margin')}</p>` +
     `<div class="big">${fmt(r.margin)} <small>dB</small></div>` +
     `<small>${t('Required margin {margin} dB', { margin: fmt(snapshot.values[9]) })}</small>` +
+    sensitivity +
     `<div class="metrics">${metrics}</div>` +
-    warnings(r)
+    warnings(r, n)
       .map((w) => `<p class="status warn">${esc(w)}</p>`)
       .join('')
   );
 }
 
 /** Warnings shown with the result: implausible inputs, EIRP over its limit and the near field. */
-function warnings(r) {
-  const list = inputWarnings(snapshot.values);
+function warnings(r, n) {
+  // A sensitivity derived from the noise settings is not the user's typo, so it is not checked.
+  const checked = [...snapshot.values];
+  if (snapshot.sensitivityFromSnr) checked[8] = -100;
+  const list = inputWarnings(checked);
+  // With an entered sensitivity, say when the noise floor tells a different story.
+  if (n && !snapshot.sensitivityFromSnr) {
+    if (r.margin >= 0 && n.margin < 0) {
+      list.push(
+        t('The signal is above the entered sensitivity but {short} dB short of the required SNR over the noise floor ({floor} dBm); check the antenna noise temperature, noise figure and bandwidth.', {
+          short: fmt(-n.margin),
+          floor: fmt(n.floor),
+        }),
+      );
+    } else if (r.margin < 0 && n.margin >= 0) {
+      list.push(t('The signal is below the entered sensitivity, but meets the required SNR over the noise floor; the entered sensitivity may assume more noise than these settings.'));
+    }
+  }
   const eirp = eirpCheck(snapshot, r);
   if (eirp?.exceeded) list.push(eirpWarning(eirp));
   if (snapshot.atmosphereStale) list.push(STALE_ESTIMATE);
@@ -452,6 +544,10 @@ function breakdownHtml(r) {
 }
 
 function showSnapshot() {
+  for (const [key, value] of Object.entries(ANALYSIS_DEFAULTS)) snapshot[key] ??= value;
+  for (const [id, key] of META) $(id).value = snapshot[key] ?? '';
+  unitResets.forEach((reset) => reset());
+  $('nf-from-parts').checked = !!snapshot.nfFromParts;
   const r = budget(snapshot.values, linkOptions(snapshot));
   $('result').innerHTML = resultHtml(r);
   $('breakdown').hidden = false;
@@ -459,10 +555,6 @@ function showSnapshot() {
   $('analysis').hidden = false;
   $('calculated-at').textContent = new Date(snapshot.date).toLocaleString(locale);
   $('snapshot-inputs').innerHTML = table([t('Parameter'), t('Value')], inputRows(snapshot));
-  for (const [key, value] of Object.entries(ANALYSIS_DEFAULTS)) snapshot[key] ??= value;
-  for (const [id, key] of META) $(id).value = snapshot[key] ?? '';
-  unitResets.forEach((reset) => reset());
-  $('nf-from-parts').checked = !!snapshot.nfFromParts;
   showMeasurements(snapshot);
   drawChart(true);
   showPass(snapshot);
@@ -551,11 +643,13 @@ function updateAnalysis() {
           [t('Verdict'), n.margin >= 0 ? t('SNR target met') : t('SNR target not met')],
           [
             t('Equivalent receiver sensitivity'),
-            t('{value} dBm (entered {entered} dBm, difference {difference} dB)', {
-              value: fmt(n.sensitivity),
-              entered: fmt(v[8]),
-              difference: fmt(v[8] - n.sensitivity),
-            }),
+            snapshot.sensitivityFromSnr
+              ? t('{value} dBm (used as the receiver sensitivity)', { value: fmt(n.sensitivity) })
+              : t('{value} dBm (entered {entered} dBm, difference {difference} dB)', {
+                  value: fmt(n.sensitivity),
+                  entered: fmt(v[8]),
+                  difference: fmt(v[8] - n.sensitivity),
+                }),
           ],
           [t('Receive G/T'), `${fmt(n.gOverT)} dB/K`],
         ],
@@ -647,6 +741,9 @@ export function loadPlan(p) {
   for (const [, id, , options] of UNIT_SELECTS) setFormValue(id, id === 'frequency-unit' ? '1' : options[0][0]);
   unitResets.forEach((reset) => reset());
   for (const i of INPUTS) setFormValue('v' + i, p.values[i]);
+  if (p.sensitivityFromSnr) setFormValue('v8', '');
+  for (const [id, key] of META) setFormValue(id, p[key] ?? ANALYSIS_DEFAULTS[key] ?? '');
+  $('nf-from-parts').checked = !!p.nfFromParts;
   const items = lossItemsOf(p);
   for (const { key, id } of LOSS_ITEMS) setFormValue(id, items[key]);
   setFormValue('amp-position', p.ampPosition === 'before' ? 'before' : 'after');
@@ -752,7 +849,7 @@ function buildForm() {
 function buildAnalysisFields() {
   const example = (value) => `placeholder="${t('e.g. {value}', { value })}"`;
   const noiseFields = [
-    ['bandwidth', t('Bandwidth'), '1000000', '', example(1)],
+    ['bandwidth', t('Bandwidth'), '1', '', example(1)],
     ['requiredSNR', t('Required SNR'), '10', 'dB', '', true],
     ['antenna-temp', t('Antenna noise temperature (optional)'), '', 'K', 'placeholder="290"'],
     ['amp-nf', t('RX amplifier noise figure'), '', 'dB', example(1)],
@@ -766,7 +863,9 @@ function buildAnalysisFields() {
       `${t('Calculate total NF from the RX cable loss, amplifier and receiver')}</label>` +
       noiseFields.slice(3).map((f) => field(...f)).join(''),
   );
-  addUnitSelect('bandwidth', 'bandwidth-unit', 'Bandwidth unit', [['1', 'Hz'], ['1000', 'kHz'], ['1000000', 'MHz']]);
+  // New calculations start at 1 MHz; ANALYSIS_DEFAULTS keeps 1000000 Hz for plans saved without a unit.
+  addUnitSelect('bandwidth', 'bandwidth-unit', 'Bandwidth unit', [['1', 'Hz'], ['1000', 'kHz'], ['1000000', 'MHz']], '1000000');
+  $('v8').closest('label').after($('requiredSNR').closest('label'));
   $('data-fields').insertAdjacentHTML(
     'beforeend',
     field('data-rate', t('Data rate'), '', '', example(9.6)) +
@@ -887,12 +986,18 @@ export function initBudget({ addPlan }) {
   updateLossTotal();
 
   buildAnalysisFields();
+  for (const [id] of META) if (typeof saved[id] === 'string') $(id).value = saved[id];
+  if (typeof saved['nf-from-parts'] === 'boolean') $('nf-from-parts').checked = saved['nf-from-parts'];
   attachHelp();
   initPass();
-  unitResets.push(bindUnit('bandwidth-unit', 'bandwidth', updateAnalysis));
-  unitResets.push(bindUnit('data-rate-unit', 'data-rate', updateAnalysis));
-  for (const [id] of META) $(id).oninput = updateAnalysis;
-  $('nf-from-parts').onchange = updateAnalysis;
+  const analysisChanged = () => {
+    updateAnalysis();
+    invalidate();
+  };
+  unitResets.push(bindUnit('bandwidth-unit', 'bandwidth', analysisChanged));
+  unitResets.push(bindUnit('data-rate-unit', 'data-rate', analysisChanged));
+  for (const [id] of META) $(id).oninput = analysisChanged;
+  $('nf-from-parts').onchange = analysisChanged;
   initMeasurements(() => drawChart(false));
 
   $('distance-slider').oninput = inspectDistance;

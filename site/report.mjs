@@ -34,6 +34,7 @@ export function eirpWarning(eirp) {
 /** Input parameters as [label, value] rows, with the itemized losses and receiver options. */
 export function inputRows(p) {
   const rows = labels.map((l, i) => [l, fmt(p.values[i], 7)]);
+  if (p.sensitivityFromSnr) rows[8][1] += ' ' + t('(from the noise floor and the required SNR)');
   rows.push([t('Path loss items (dB)'), lossItemsSummary(lossItemsOf(p))]);
   if (p.lossCalcs?.polarization) {
     rows.push([t('Polarization mismatch'), describeLossCalc('polarization', p.lossCalcs.polarization)]);

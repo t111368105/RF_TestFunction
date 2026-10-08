@@ -360,12 +360,31 @@
             <article>
               <h2>03 <span>Receiver</span></h2>
               <div id="receiver" class="fields"></div>
+              <h4 class="loss-group">Noise</h4>
+              <p class="hint">The noise that the signal must rise above: the antenna noise over the bandwidth plus the receiver's own noise. With these, the result shows the noise floor and the SNR, so the antenna noise counts towards whether the signal can be received.</p>
+              <div id="noise-fields" class="fields"></div>
+              <!-- Moved under the antenna noise temperature field by budget.mjs. -->
+              <details class="estimator" id="sky-calc">
+                <summary>Estimate the antenna temperature from the sky (ITU-R P.618)</summary>
+                <div id="sky-calc-fields" class="fields"></div>
+                <div class="actions">
+                  <button type="button" id="sky-calc-path">Use the Path's Atmospheric and Cloud Loss</button>
+                  <button type="button" id="sky-calc-run">Calculate and Fill</button>
+                </div>
+                <div id="sky-calc-result" aria-live="polite"></div>
+                <p class="hint">For a ground station antenna looking at the sky. The atmosphere that attenuates the signal also emits noise, so rain raises the antenna temperature as well as the loss. Use the attenuation at the same time percentage as the losses above.</p>
+                <div class="formulas">
+                  <h4>Formulas</h4>
+                  <!-- eq:sky-temperature --><div class="eq"><math display="block"><mrow><msub><mi>T</mi><mi>a</mi></msub><mo>&#x0003D;</mo><msub><mi>T</mi><mrow><mi>m</mi><mi>r</mi></mrow></msub><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mn>1</mn><mo>&#x02212;</mo><msup><mn>10</mn><mrow><mo>&#x02212;</mo><mi>A</mi><mo>&#x0002F;</mo><mn>10</mn></mrow></msup><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mo>&#x0002B;</mo><mn>2.7</mn><mo>&#x000B7;</mo><msup><mn>10</mn><mrow><mo>&#x02212;</mo><mi>A</mi><mo>&#x0002F;</mo><mn>10</mn></mrow></msup><mo>&#x0002B;</mo><msub><mi>T</mi><mi>g</mi></msub></mrow></math></div><!-- /eq -->
+                  <p class="caption">A: atmospheric attenuation excluding scintillation (dB); T<sub>mr</sub>: mean radiating temperature, 275 K without local data, or 37.34 + 0.81 T<sub>s</sub> (K) in clear or cloudy weather; T<sub>g</sub>: ground pickup through sidelobes and spillover.</p>
+                </div>
+              </details>
               <p class="hint">RX antenna → cable → amplifier → receiver, or the amplifier first for a masthead LNA. Include connectors and adapters in the cable loss. Enter 0 dB gain if there is no amplifier. The position changes the system noise figure, not the received power.</p>
             </article>
             <article>
               <h2>04 <span>Requirements</span></h2>
               <div id="requirements" class="fields"></div>
-              <p class="hint">Sensitivity is referenced to the receiver input, after the RX amplifier and cable. The EIRP limit is optional, e.g. the regulatory limit for the band.</p>
+              <p class="hint">Sensitivity is referenced to the receiver input, after the RX amplifier and cable. Leave it blank to judge the link by the required SNR over the noise floor instead, which counts the antenna noise and an LNA correctly. The EIRP limit is optional, e.g. the regulatory limit for the band.</p>
             </article>
             <p id="error" role="alert" class="error"></p>
             <div class="actions">
@@ -449,23 +468,6 @@
           </article>
           <article>
             <h3>Noise and SNR</h3>
-            <div id="noise-fields" class="fields"></div>
-            <!-- Moved under the antenna noise temperature field by budget.mjs. -->
-            <details class="estimator" id="sky-calc">
-              <summary>Estimate the antenna temperature from the sky (ITU-R P.618)</summary>
-              <div id="sky-calc-fields" class="fields"></div>
-              <div class="actions">
-                <button type="button" id="sky-calc-path">Use the Path's Atmospheric and Cloud Loss</button>
-                <button type="button" id="sky-calc-run">Calculate and Fill</button>
-              </div>
-              <div id="sky-calc-result" aria-live="polite"></div>
-              <p class="hint">For a ground station antenna looking at the sky. The atmosphere that attenuates the signal also emits noise, so rain raises the antenna temperature as well as the loss. Use the attenuation at the same time percentage as the losses above.</p>
-              <div class="formulas">
-                <h4>Formulas</h4>
-                <!-- eq:sky-temperature --><div class="eq"><math display="block"><mrow><msub><mi>T</mi><mi>a</mi></msub><mo>&#x0003D;</mo><msub><mi>T</mi><mrow><mi>m</mi><mi>r</mi></mrow></msub><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mn>1</mn><mo>&#x02212;</mo><msup><mn>10</mn><mrow><mo>&#x02212;</mo><mi>A</mi><mo>&#x0002F;</mo><mn>10</mn></mrow></msup><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mo>&#x0002B;</mo><mn>2.7</mn><mo>&#x000B7;</mo><msup><mn>10</mn><mrow><mo>&#x02212;</mo><mi>A</mi><mo>&#x0002F;</mo><mn>10</mn></mrow></msup><mo>&#x0002B;</mo><msub><mi>T</mi><mi>g</mi></msub></mrow></math></div><!-- /eq -->
-                <p class="caption">A: atmospheric attenuation excluding scintillation (dB); T<sub>mr</sub>: mean radiating temperature, 275 K without local data, or 37.34 + 0.81 T<sub>s</sub> (K) in clear or cloudy weather; T<sub>g</sub>: ground pickup through sidelobes and spillover.</p>
-              </div>
-            </details>
             <div id="noise-results" aria-live="polite"></div>
             <div class="formulas">
               <h4>Formulas</h4>
@@ -474,7 +476,7 @@
               <!-- eq:noise-snr --><div class="eq"><math display="block"><mrow><mtext>SNR</mtext><mo>&#x0003D;</mo><mi>C</mi><mo>&#x02212;</mo><mi>N</mi></mrow></math></div><!-- /eq -->
               <p class="caption">B: bandwidth; T<sub>a</sub>: antenna noise temperature; C: power at the RX antenna output. With T<sub>a</sub> = 290 K, N = −173.975 + 10 log₁₀ B + NF.</p>
             </div>
-            <p class="hint">The total system NF must include the RX cable, amplifier and receiver, referred to the RX antenna output; do not enter the amplifier NF alone. Tick the box to derive it with the Friis formula, treating the RX cable as a passive loss at 290 K (NF = loss). Leave the antenna noise temperature blank for the 290 K reference; set it for antennas that see a colder or hotter scene, such as a satellite ground station facing the sky. The equivalent sensitivity is the receiver input level that just meets the required SNR, for comparison with the datasheet value.</p>
+            <p class="hint">The noise settings are under 03 Receiver and the required SNR under 04 Requirements. The total system NF must include the RX cable, amplifier and receiver, referred to the RX antenna output; do not enter the amplifier NF alone. The equivalent sensitivity is the receiver input level that just meets the required SNR, for comparison with the datasheet value.</p>
           </article>
           <article>
             <h3>Data Rate and Eb/N₀</h3>
