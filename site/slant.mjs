@@ -4,18 +4,28 @@
 
 import { number } from './calculations.mjs';
 import { slantRange } from './satellite.mjs';
-import { setSlantElevation, stationAltitude } from './estimator.mjs';
+import { setSlantElevation, stationAltitude, sharedElevation } from './estimator.mjs';
 import { $, fmt, read, write, field } from './ui.mjs';
 import { t } from './i18n.mjs';
 
 const STORAGE_KEY = 'rf.slant';
-const IDS = ['orbit-altitude', 'slant-elevation'];
+export const SLANT_IDS = ['orbit-altitude', 'slant-elevation'];
+const IDS = SLANT_IDS;
 
 // The last range filled into the distance: { km, altitude, elevation, stationKm }.
 let record = null;
 
 function persist() {
   write(STORAGE_KEY, { fields: Object.fromEntries(IDS.map((id) => [id, $(id).value])), record });
+}
+
+/** The last calculated range, to restore after Undo. */
+export const orbitRecord = () => record;
+
+/** Sets the calculated range (null: none) and saves the calculator's fields. */
+export function setOrbitRecord(r) {
+  record = r;
+  persist();
 }
 
 /** The orbit behind the link distance (km), while the distance still holds the calculated range. */
@@ -43,13 +53,13 @@ export function initSlant({ fill }) {
   // (here or under the shared conditions, kept equal) and the station altitude.
   const follow = (source) => {
     if (!currentOrbit(number($('v1').value) * number($('distance-unit').value))) return;
-    const elevation = number($(source).value);
+    const elevation = source === 'atmo-elevation' ? sharedElevation() : number($(source).value);
     const altitude = number($('orbit-altitude').value);
     const stationKm = stationAltitude();
     const km = slantRange(altitude, elevation, stationKm);
     if (km === null) return;
-    if (source === 'atmo-elevation') $('slant-elevation').value = $('atmo-elevation').value;
-    else if (elevation !== number($('atmo-elevation').value)) setSlantElevation(elevation);
+    if (source === 'atmo-elevation') $('slant-elevation').value = String(elevation);
+    else if (elevation !== sharedElevation()) setSlantElevation(elevation);
     record = { km, altitude, elevation, stationKm };
     persist();
     fill('v1', String(Number((km / number($('distance-unit').value)).toPrecision(7))));

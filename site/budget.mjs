@@ -14,7 +14,22 @@ import {
   partialBudget,
   DBD_TO_DBI,
 } from './calculations.mjs';
-import { $, esc, fmt, fmtRate, notice, read, write, field, table, bindUnit, newId } from './ui.mjs';
+import {
+  $,
+  esc,
+  fmt,
+  fmtRate,
+  notice,
+  read,
+  write,
+  field,
+  table,
+  bindUnit,
+  newId,
+  formState,
+  setFormState,
+  resetControls,
+} from './ui.mjs';
 import { distanceChart } from './chart.mjs';
 import { reportHtml, inputRows, linkOptions, eirpCheck, eirpWarning, STALE_ESTIMATE } from './report.mjs';
 import { initMeasurements, showMeasurements, chartMeasurements } from './measurements.mjs';
@@ -26,11 +41,22 @@ import {
   surfaceTemperature,
   typedItems,
   restoreTypedItems,
+  conditionIds,
+  percentState,
+  resetConditions,
+  syncConditions,
 } from './estimator.mjs';
-import { initLossCalculators, currentLossCalcs, restoreLossCalcs, refreshLossCalcs } from './loss-calculators.mjs';
+import {
+  initLossCalculators,
+  currentLossCalcs,
+  restoreLossCalcs,
+  refreshLossCalcs,
+  calculatorIds,
+  syncCalculators,
+} from './loss-calculators.mjs';
 import { LOSS_GROUPS, LOSS_ITEMS, lossItemsOf } from './path-losses.mjs';
 import { attachHelp } from './help.mjs';
-import { initSlant, currentOrbit } from './slant.mjs';
+import { initSlant, currentOrbit, SLANT_IDS, orbitRecord, setOrbitRecord } from './slant.mjs';
 import { initPass, showPass, showAvailability } from './pass.mjs';
 import { skyTemperature } from './satellite.mjs';
 import { noisePower } from './signals.mjs';
@@ -314,33 +340,58 @@ function setFormValue(id, value) {
   $(id).value = value;
 }
 
+// This page's own fields that Clear puts back to their defaults: the link, the analysis and the sky
+// noise estimator. The estimator, calculator and slant range fields are reset by their modules.
+const ownIds = () => [...draftIds, ...META.map(([id]) => id), 'nf-from-parts', 'sky-atten', 'sky-tmr', 'sky-ground'];
+const allIds = () => [...ownIds(), ...conditionIds(), ...calculatorIds(), ...SLANT_IDS];
+
+/** Puts every field back to its default, as on a first visit; Undo brings the previous state back. */
 function clearForm() {
   const v = values();
+  if (snapshot) syncMeta();
   undo = {
-    fields: Object.fromEntries(draftIds.map((id) => [id, $(id).value])),
+    controls: formState(allIds()),
     loaded,
     estimate: currentEstimate(v[0], v[1])?.estimate ?? null,
     lossCalcs: currentLossCalcs(),
     typed: typedItems(),
+    percent: percentState(),
+    orbit: orbitRecord(),
+    sky: { ...sky },
+    carried: snapshot ? Object.fromEntries(CARRIED.map((key) => [key, structuredClone(snapshot[key])])) : carried,
   };
-  for (const i of INPUTS) setFormValue('v' + i, defaults[i]);
-  for (const { id } of LOSS_ITEMS) setFormValue(id, '0');
-  setFormValue('eirp-limit', '');
+  resetControls(ownIds());
+  resetConditions();
+  resetControls(calculatorIds());
+  syncCalculators();
+  resetControls(SLANT_IDS);
+  setOrbitRecord(null);
   // Start the calculators afresh: the automatic estimates fill in again once the link is known.
   restoreEstimate(null);
   restoreTypedItems();
   restoreLossCalcs(null);
+  sky.atten = sky.temp = null;
+  for (const out of document.querySelectorAll('#budget [id$="-result"]')) out.innerHTML = '';
+  snapshot = null;
+  carried = null;
   loaded = null;
+  unitResets.forEach((reset) => reset());
   invalidate();
   $('undo').hidden = false;
 }
 
 function undoClear() {
   if (!undo) return;
-  for (const [id, v] of Object.entries(undo.fields)) setFormValue(id, v);
+  setFormState(undo.controls);
+  syncConditions(undo.percent);
+  syncCalculators();
+  setOrbitRecord(undo.orbit);
   restoreEstimate(undo.estimate);
   restoreTypedItems(undo.typed);
   restoreLossCalcs(undo.lossCalcs);
+  Object.assign(sky, undo.sky);
+  snapshot = null;
+  carried = undo.carried;
   loaded = undo.loaded;
   unitResets.forEach((reset) => reset());
   undo = null;

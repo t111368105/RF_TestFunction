@@ -123,3 +123,25 @@ export function bindUnit(selectId, inputId, onChange, convert = scaleUnits) {
   });
   return () => (old = select.value);
 }
+
+/** The values of form controls by id (checked state for checkboxes), to put back with setFormState. */
+export function formState(ids) {
+  return Object.fromEntries(ids.map((id) => [id, $(id).type === 'checkbox' ? $(id).checked : $(id).value]));
+}
+
+export function setFormState(state) {
+  for (const [id, v] of Object.entries(state)) {
+    if ($(id).type === 'checkbox') $(id).checked = v;
+    else $(id).value = v;
+  }
+}
+
+/** Puts form controls back to the values written in their markup. */
+export function resetControls(ids) {
+  for (const id of ids) {
+    const el = $(id);
+    if (el.type === 'checkbox') el.checked = el.defaultChecked;
+    else if (el.tagName === 'SELECT') el.selectedIndex = Math.max(0, [...el.options].findIndex((o) => o.defaultSelected));
+    else el.value = el.defaultValue;
+  }
+}

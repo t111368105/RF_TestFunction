@@ -174,6 +174,15 @@ export function refreshLossCalcs(fMHz, fill) {
   follow('pointing', fMHz, fill);
 }
 
+/** The ids of the calculator fields. */
+export const calculatorIds = () => [...ids];
+
+/** After the fields were set from outside (Clear, Undo): shows them consistently and saves them. */
+export function syncCalculators() {
+  updateVisibility();
+  persist();
+}
+
 /** The calculator records whose values are still in their loss fields, by kind, for a snapshot. */
 export function currentLossCalcs() {
   return Object.fromEntries(

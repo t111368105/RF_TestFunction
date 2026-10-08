@@ -29,7 +29,7 @@ import {
   multipathFade,
   worstMonthPercent,
 } from './terrain.mjs';
-import { $, fmt, read, write, field } from './ui.mjs';
+import { $, fmt, read, write, field, resetControls } from './ui.mjs';
 import { LOSS_ITEMS } from './path-losses.mjs';
 import { t } from './i18n.mjs';
 
@@ -78,7 +78,7 @@ const COMMON = [
   ['atmo-pressure', 'Air pressure', '1013.25', 'hPa', ''],
   ['atmo-water', 'Water vapour density', TAIPEI['atmo-water'], 'g/m³', ''],
   // 90° (overhead) matches the shortest link distance; use the minimum operating elevation for worst case.
-  ['atmo-elevation', 'Elevation angle', '90', '°', '', true],
+  ['atmo-elevation', 'Elevation angle', '90', '°', 'placeholder="90"', true],
   ['atmo-altitude-m', 'Station altitude', TAIPEI['atmo-altitude-m'], 'm', '', true, true],
   ['atmo-latitude', 'Station latitude', TAIPEI['atmo-latitude'], '°', '', true, true],
   ['terr-tx-alt', 'TX antenna altitude', '', 'm', `placeholder="${t('above sea level')}"`, 'terrestrial', true],
@@ -295,7 +295,7 @@ function inputs(link) {
     tempC: value('atmo-temp'),
     pressure: value('atmo-pressure'),
     waterVapour: value('atmo-water'),
-    elevation: value('atmo-elevation'),
+    elevation: sharedElevation(),
     stationAltitude: value('atmo-altitude-m') / 1000, // The models take km.
     latitude: value('atmo-latitude'),
     rainHeight: value('atmo-rain-height'),
@@ -721,6 +721,38 @@ export function refreshEstimates(link, fill) {
   persist();
 }
 
+// The preset shows which typical value S4 holds, and Custom once it is edited to another value.
+function showS4Preset() {
+  const v = $('atmo-s4').value.trim();
+  $('atmo-s4-preset').value = S4_PRESETS.some(([value]) => value === v) ? v : 'custom';
+}
+
+/** The ids of the shared conditions and estimator fields, and the time percentage they follow. */
+export const conditionIds = () => [...ids];
+export const percentState = () => percentShown;
+
+/** Puts the shared conditions and every estimator field back to their defaults (Taipei values). */
+export function resetConditions() {
+  resetControls(ids);
+  percentShown = 0.01;
+  for (const [id, valueAt] of Object.entries(PERCENT_DEPENDENT)) $(id).value = valueAt(percentShown);
+  syncConditions(percentShown);
+}
+
+/** After the fields were set from outside (Undo): shows them consistently and saves them. */
+export function syncConditions(percent) {
+  if (percent > 0) percentShown = percent;
+  showPathFields();
+  highlightSiteValues();
+  showS4Preset();
+  persist();
+}
+
+/** The shared elevation (°); a blank field means 90°, overhead. */
+export function sharedElevation() {
+  return $('atmo-elevation').value.trim() === '' ? 90 : number($('atmo-elevation').value);
+}
+
 /** Sets the shared conditions to an Earth–space path at elevation el°. */
 export function setSlantElevation(el) {
   $('atmo-path').value = 'slant';
@@ -830,11 +862,6 @@ export function initEstimator({ link, fill }) {
       refreshEstimates(link(), fill);
     });
   }
-  // The preset shows which typical value S4 holds, and Custom once it is edited to another value.
-  const showS4Preset = () => {
-    const v = $('atmo-s4').value.trim();
-    $('atmo-s4-preset').value = S4_PRESETS.some(([value]) => value === v) ? v : 'custom';
-  };
   showS4Preset();
   $('atmo-s4').addEventListener('input', showS4Preset);
   $('atmo-s4-preset').addEventListener('change', () => {
@@ -851,6 +878,12 @@ export function initEstimator({ link, fill }) {
     persist();
     refreshEstimates(link(), fill);
   };
+  // A blank elevation counts as 90°; leaving the field blank shows that value.
+  $('atmo-elevation').addEventListener('change', () => {
+    if ($('atmo-elevation').value.trim() !== '') return;
+    $('atmo-elevation').value = '90';
+    $('atmo-elevation').dispatchEvent(new Event('input', { bubbles: true }));
+  });
   $('atmo-path').addEventListener('change', () => {
     showPathFields();
     persist();
