@@ -6,6 +6,7 @@ import { initBudget, loadPlan, analyzePlan, currentSnapshot, showCalculation } f
 import { initPlans, addPlan, renderPlans } from './plans.mjs';
 import { initTools } from './tools.mjs';
 import { initPrefs } from './prefs.mjs';
+import { initLearn } from './learn.mjs';
 
 // Switching language reloads the page; this carries the open tab, scroll position and current
 // calculation across the reload.
@@ -62,6 +63,7 @@ initPlans({
   },
 });
 initPrefs();
+initLearn();
 renderPlans();
 initTools();
 restoreAfterSwitch();

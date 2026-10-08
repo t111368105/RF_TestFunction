@@ -103,6 +103,19 @@ FORMULAS = {
     # Satellite geometry and sky noise
     "slant-range": r"d = \sqrt{(R_e + H)^2 - (R_e + h_s)^2 \cos^2 \theta} - (R_e + h_s) \sin \theta",
     "sky-temperature": r"T_a = T_{mr}\left(1 - 10^{-A/10}\right) + 2.7 \cdot 10^{-A/10} + T_g",
+    # Learn page
+    "learn-wave": r"s(t) = A \sin(2\pi f t + \varphi), \quad T = \frac{1}{f}",
+    "learn-wavelength": r"\lambda = \frac{c}{f}",
+    "learn-fourier": r"X(f) = \int_{-\infty}^{\infty} x(t)\, e^{-j 2\pi f t}\, dt",
+    "learn-square": r"x(t) = \frac{4}{\pi} \sum_{n = 1, 3, 5, \ldots} \frac{1}{n} \sin(2\pi n f_0 t)",
+    "learn-nyquist": r"f_s > 2 f_{\max}",
+    "learn-alias": r"f_{\text{alias}} = \left| f - f_s \cdot \operatorname{round}\left(\frac{f}{f_s}\right) \right|",
+    "learn-am": r"s_{\text{AM}}(t) = \left[1 + m \cos(2\pi f_m t)\right] \cos(2\pi f_c t), \quad B = 2 f_m",
+    "learn-fm": r"s_{\text{FM}}(t) = \cos\left(2\pi f_c t + \beta \sin(2\pi f_m t)\right)",
+    "learn-carson": r"B \approx 2(\beta + 1) f_m",
+    "learn-bits": r"k = \log_2 M, \quad \frac{E_s}{N_0} = k \frac{E_b}{N_0}",
+    "learn-ber-psk": r"P_b^{\text{BPSK, QPSK}} = Q\left(\sqrt{2 E_b / N_0}\right), \quad P_b^{M\text{-PSK}} \approx \frac{2}{k} Q\left(\sqrt{2 k E_b / N_0} \sin\frac{\pi}{M}\right)",
+    "learn-ber-qam": r"P_b^{M\text{-QAM}} \approx \frac{4}{k}\left(1 - \frac{1}{\sqrt{M}}\right) Q\left(\sqrt{\frac{3 k}{M - 1} \frac{E_b}{N_0}}\right)",
 }
 
 MARKER = re.compile(r"<!-- eq:([\w-]+) -->.*?<!-- /eq -->", re.S)

@@ -60,6 +60,7 @@
       <button data-tab="budget" aria-current="page">Link Budget</button>
       <button data-tab="power">Power Converter</button>
       <button data-tab="doppler">Doppler Shift</button>
+      <button data-tab="learn">Learn</button>
       <button data-tab="plans">Saved Plans <span id="count">0</span></button>
     </nav>
 
@@ -590,6 +591,162 @@
           <!-- eq:doppler-shift --><div class="eq"><math display="block"><mrow><mi>&#x00394;</mi><mi>f</mi><mo>&#x02248;</mo><mrow><mo>&#x02212;</mo><msub><mi>f</mi><mn>0</mn></msub></mrow><mfrac><mrow><msub><mi>v</mi><mi>r</mi></msub></mrow><mrow><mi>c</mi></mrow></mfrac></mrow></math></div><!-- /eq -->
           <!-- eq:doppler-received --><div class="eq"><math display="block"><mrow><msub><mi>f</mi><mi>r</mi></msub><mo>&#x0003D;</mo><msub><mi>f</mi><mn>0</mn></msub><mo>&#x0002B;</mo><mi>&#x00394;</mi><mi>f</mi></mrow></math></div><!-- /eq -->
           <p class="hint">c = 299,792,458 m/s; vᵣ is positive when receding. Valid for speeds far below the speed of light; the input limit is 0.01c. Two-way radar, relativistic corrections and orbit tracking are not included.</p>
+        </article>
+      </section>
+
+      <!-- Learn: interactive demonstrations, drawn by learn.mjs -->
+      <section id="learn" class="page" hidden>
+        <p class="eyebrow">LEARN</p>
+        <h1>Communication Basics</h1>
+        <p class="lead">Move the sliders and watch the charts change. Each section explains one idea behind a radio link, from a single sine wave to the bits carried by a digital signal.</p>
+        <nav class="learn-index" aria-label="Sections">
+          <a href="#learn-wave">1. Frequency and Waveform</a>
+          <a href="#learn-fourier">2. Time and Frequency Domains</a>
+          <a href="#learn-sampling">3. Sampling and Aliasing</a>
+          <a href="#learn-modulation">4. Analog Modulation: AM and FM</a>
+          <a href="#learn-constellation">5. Digital Modulation and Constellations</a>
+        </nav>
+
+        <article id="learn-wave" class="learn">
+          <h3>1. Frequency and Waveform</h3>
+          <p>A radio wave is a sine wave. Its <strong>frequency</strong> f is how many cycles it completes each second (Hz). A higher frequency packs more cycles into the same time, so the wave looks narrower; the time of one cycle, the <strong>period</strong> T, gets shorter. In space the wave travels at the speed of light, so a higher frequency also means a shorter <strong>wavelength</strong> λ, which sets the size of antennas.</p>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <label for="wave-f">Frequency f <output id="wave-f-out"></output><input type="range" id="wave-f" min="0.5" max="20" step="0.5" value="2" data-unit="Hz"></label>
+              <label for="wave-a">Amplitude A <output id="wave-a-out"></output><input type="range" id="wave-a" min="0.1" max="1" step="0.05" value="1"></label>
+              <label for="wave-phase">Phase φ <output id="wave-phase-out"></output><input type="range" id="wave-phase" min="0" max="360" step="15" value="0" data-unit="°"></label>
+              <label class="check"><input type="checkbox" id="wave-ref" checked> Show a 1 Hz wave for comparison</label>
+              <label for="wave-rf">Wavelength of a real radio frequency<select id="wave-rf"></select></label>
+            </div>
+            <div class="learn-plots">
+              <div id="wave-chart" class="chart"></div>
+              <div id="wave-readout"></div>
+            </div>
+          </div>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:learn-wave --><div class="eq"><math display="block"><mrow><mi>s</mi><mo stretchy="false">&#x00028;</mo><mi>t</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mi>A</mi><mi>sin</mi><mo stretchy="false">&#x00028;</mo><mn>2</mn><mi>&#x003C0;</mi><mi>f</mi><mi>t</mi><mo>&#x0002B;</mo><mi>&#x003C6;</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0002C;</mo><mspace width="1em" /><mi>T</mi><mo>&#x0003D;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mi>f</mi></mrow></mfrac></mrow></math></div><!-- /eq -->
+            <!-- eq:learn-wavelength --><div class="eq"><math display="block"><mrow><mi>&#x003BB;</mi><mo>&#x0003D;</mo><mfrac><mrow><mi>c</mi></mrow><mrow><mi>f</mi></mrow></mfrac></mrow></math></div><!-- /eq -->
+            <p class="caption">c = 299,792,458 m/s. The charts use a few hertz so the cycles are visible; radio waves follow the same shape at millions or billions of cycles per second.</p>
+          </div>
+        </article>
+
+        <article id="learn-fourier" class="learn">
+          <h3>2. Time and Frequency Domains</h3>
+          <p>Any signal can be built from sine waves. The <strong>time domain</strong> shows how the signal changes over time; the <strong>frequency domain</strong> (spectrum) shows which sine waves it contains and how strong each is. The Fourier transform converts between the two. A single sine is one line in the spectrum; a sharp-edged square wave needs many odd harmonics, so it occupies a wide band.</p>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <label for="fourier-mode">Signal<select id="fourier-mode">
+                  <option value="sum">Add up to three sine waves</option>
+                  <option value="square">Build a square wave from harmonics</option>
+                </select></label>
+              <div id="fourier-sum">
+                <label for="fourier-f1">Sine 1 frequency <output id="fourier-f1-out"></output><input type="range" id="fourier-f1" min="1" max="50" step="1" value="3" data-unit="Hz"></label>
+                <label for="fourier-a1">Sine 1 amplitude <output id="fourier-a1-out"></output><input type="range" id="fourier-a1" min="0" max="1" step="0.05" value="1"></label>
+                <label for="fourier-f2">Sine 2 frequency <output id="fourier-f2-out"></output><input type="range" id="fourier-f2" min="1" max="50" step="1" value="10" data-unit="Hz"></label>
+                <label for="fourier-a2">Sine 2 amplitude <output id="fourier-a2-out"></output><input type="range" id="fourier-a2" min="0" max="1" step="0.05" value="0.5"></label>
+                <label for="fourier-f3">Sine 3 frequency <output id="fourier-f3-out"></output><input type="range" id="fourier-f3" min="1" max="50" step="1" value="25" data-unit="Hz"></label>
+                <label for="fourier-a3">Sine 3 amplitude <output id="fourier-a3-out"></output><input type="range" id="fourier-a3" min="0" max="1" step="0.05" value="0"></label>
+              </div>
+              <div id="fourier-square" hidden>
+                <label for="sq-f0">Fundamental frequency <output id="sq-f0-out"></output><input type="range" id="sq-f0" min="1" max="8" step="1" value="2" data-unit="Hz"></label>
+                <label for="sq-n">Number of odd harmonics <output id="sq-n-out"></output><input type="range" id="sq-n" min="1" max="15" step="1" value="3"></label>
+              </div>
+              <label for="fourier-noise">Noise <output id="fourier-noise-out"></output><input type="range" id="fourier-noise" min="0" max="1" step="0.05" value="0"></label>
+            </div>
+            <div class="learn-plots">
+              <div id="fourier-time" class="chart"></div>
+              <div id="fourier-freq" class="chart"></div>
+              <p id="fourier-readout" class="mono"></p>
+            </div>
+          </div>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:learn-fourier --><div class="eq"><math display="block"><mrow><mi>X</mi><mo stretchy="false">&#x00028;</mo><mi>f</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><msubsup><mo>&#x0222B;</mo><mrow><mo>&#x02212;</mo><mo>&#x0221E;</mo></mrow><mrow><mo>&#x0221E;</mo></mrow></msubsup><mi>x</mi><mo stretchy="false">&#x00028;</mo><mi>t</mi><mo stretchy="false">&#x00029;</mo><mspace width="0.167em" /><msup><mi>e</mi><mrow><mo>&#x02212;</mo><mi>j</mi><mn>2</mn><mi>&#x003C0;</mi><mi>f</mi><mi>t</mi></mrow></msup><mspace width="0.167em" /><mi>d</mi><mi>t</mi></mrow></math></div><!-- /eq -->
+            <!-- eq:learn-square --><div class="eq"><math display="block"><mrow><mi>x</mi><mo stretchy="false">&#x00028;</mo><mi>t</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mfrac><mrow><mn>4</mn></mrow><mrow><mi>&#x003C0;</mi></mrow></mfrac><munder><mo>&#x02211;</mo><mrow><mi>n</mi><mo>&#x0003D;</mo><mn>1</mn><mo>&#x0002C;</mo><mn>3</mn><mo>&#x0002C;</mo><mn>5</mn><mo>&#x0002C;</mo><mi>&#x02026;</mi></mrow></munder><mfrac><mrow><mn>1</mn></mrow><mrow><mi>n</mi></mrow></mfrac><mi>sin</mi><mo stretchy="false">&#x00028;</mo><mn>2</mn><mi>&#x003C0;</mi><mi>n</mi><msub><mi>f</mi><mn>0</mn></msub><mi>t</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div><!-- /eq -->
+            <p class="caption">X(f): spectrum of the signal x(t). The square wave of fundamental f<sub>0</sub> contains only odd harmonics, each weaker by 1/n; more harmonics give sharper edges but a wider bandwidth. Noise spreads over every frequency.</p>
+          </div>
+        </article>
+
+        <article id="learn-sampling" class="learn">
+          <h3>3. Sampling and Aliasing</h3>
+          <p>Digital radios measure the signal at regular instants, at the <strong>sampling rate</strong> f<sub>s</sub>. The samples describe the signal only if f<sub>s</sub> is more than twice its highest frequency (the Nyquist criterion). Otherwise the samples fit a lower frequency just as well, and the receiver sees that false frequency instead: this is <strong>aliasing</strong>.</p>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <label for="samp-f">Signal frequency f <output id="samp-f-out"></output><input type="range" id="samp-f" min="0.5" max="25" step="0.5" value="3" data-unit="Hz"></label>
+              <label for="samp-fs">Sampling rate f<sub>s</sub> <output id="samp-fs-out"></output><input type="range" id="samp-fs" min="2" max="60" step="1" value="20" data-unit="Hz"></label>
+              <p class="hint">Try a signal of 9 Hz sampled at 10 Hz: the samples trace a 1 Hz wave.</p>
+            </div>
+            <div class="learn-plots">
+              <div id="samp-chart" class="chart"></div>
+              <div id="samp-readout"></div>
+            </div>
+          </div>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:learn-nyquist --><div class="eq"><math display="block"><mrow><msub><mi>f</mi><mi>s</mi></msub><mo>&#x0003E;</mo><mn>2</mn><msub><mi>f</mi><mrow><mo>max</mo></mrow></msub></mrow></math></div><!-- /eq -->
+            <!-- eq:learn-alias --><div class="eq"><math display="block"><mrow><msub><mi>f</mi><mrow><mtext>alias</mtext></mrow></msub><mo>&#x0003D;</mo><mrow><mo stretchy="true" fence="true" form="prefix">&#x0007C;</mo><mi>f</mi><mo>&#x02212;</mo><msub><mi>f</mi><mi>s</mi></msub><mo>&#x000B7;</mo><mo>round</mo><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mfrac><mrow><mi>f</mi></mrow><mrow><msub><mi>f</mi><mi>s</mi></msub></mrow></mfrac><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mo stretchy="true" fence="true" form="postfix">&#x0007C;</mo></mrow></mrow></math></div><!-- /eq -->
+            <p class="caption">Blue: the real signal; dots: the samples; dashed: the slower wave the samples also fit when aliasing occurs.</p>
+          </div>
+        </article>
+
+        <article id="learn-modulation" class="learn">
+          <h3>4. Analog Modulation: AM and FM</h3>
+          <p>To carry a message, a transmitter varies a high-frequency <strong>carrier</strong>. <strong>AM</strong> varies its amplitude, so the outline (envelope) follows the message; the spectrum gets two sidebands next to the carrier. <strong>FM</strong> varies its frequency, so the cycles bunch up and spread out; the amplitude stays constant, but the spectrum spreads into many sidebands as the modulation index β grows.</p>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <label for="mod-type">Modulation<select id="mod-type">
+                  <option value="am">AM (amplitude)</option>
+                  <option value="fm">FM (frequency)</option>
+                </select></label>
+              <label for="mod-fc">Carrier frequency f<sub>c</sub> <output id="mod-fc-out"></output><input type="range" id="mod-fc" min="10" max="60" step="1" value="40" data-unit="Hz"></label>
+              <label for="mod-fm">Message frequency f<sub>m</sub> <output id="mod-fm-out"></output><input type="range" id="mod-fm" min="1" max="8" step="1" value="4" data-unit="Hz"></label>
+              <label id="mod-am-index" for="mod-m">AM modulation index m <output id="mod-m-out"></output><input type="range" id="mod-m" min="0" max="1.5" step="0.05" value="0.5"></label>
+              <label id="mod-fm-index" for="mod-beta" hidden>FM modulation index β <output id="mod-beta-out"></output><input type="range" id="mod-beta" min="0" max="10" step="0.5" value="2"></label>
+            </div>
+            <div class="learn-plots">
+              <div id="mod-time" class="chart"></div>
+              <div id="mod-freq" class="chart"></div>
+              <div id="mod-readout"></div>
+            </div>
+          </div>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:learn-am --><div class="eq"><math display="block"><mrow><msub><mi>s</mi><mrow><mtext>AM</mtext></mrow></msub><mo stretchy="false">&#x00028;</mo><mi>t</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mrow><mo stretchy="true" fence="true" form="prefix">[</mo><mn>1</mn><mo>&#x0002B;</mo><mi>m</mi><mi>cos</mi><mo stretchy="false">&#x00028;</mo><mn>2</mn><mi>&#x003C0;</mi><msub><mi>f</mi><mi>m</mi></msub><mi>t</mi><mo stretchy="false">&#x00029;</mo><mo stretchy="true" fence="true" form="postfix">]</mo></mrow><mi>cos</mi><mo stretchy="false">&#x00028;</mo><mn>2</mn><mi>&#x003C0;</mi><msub><mi>f</mi><mi>c</mi></msub><mi>t</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0002C;</mo><mspace width="1em" /><mi>B</mi><mo>&#x0003D;</mo><mn>2</mn><msub><mi>f</mi><mi>m</mi></msub></mrow></math></div><!-- /eq -->
+            <!-- eq:learn-fm --><div class="eq"><math display="block"><mrow><msub><mi>s</mi><mrow><mtext>FM</mtext></mrow></msub><mo stretchy="false">&#x00028;</mo><mi>t</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mi>cos</mi><mspace width="0.167em" /><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mn>2</mn><mi>&#x003C0;</mi><msub><mi>f</mi><mi>c</mi></msub><mi>t</mi><mo>&#x0002B;</mo><mi>&#x003B2;</mi><mi>sin</mi><mo stretchy="false">&#x00028;</mo><mn>2</mn><mi>&#x003C0;</mi><msub><mi>f</mi><mi>m</mi></msub><mi>t</mi><mo stretchy="false">&#x00029;</mo><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow></mrow></math></div><!-- /eq -->
+            <!-- eq:learn-carson --><div class="eq"><math display="block"><mrow><mi>B</mi><mo>&#x02248;</mo><mn>2</mn><mo stretchy="false">&#x00028;</mo><mi>&#x003B2;</mi><mo>&#x0002B;</mo><mn>1</mn><mo stretchy="false">&#x00029;</mo><msub><mi>f</mi><mi>m</mi></msub></mrow></math></div><!-- /eq -->
+            <p class="caption">Dashed: the AM envelope, or the FM message. β = Δf / f<sub>m</sub>, the peak frequency deviation over the message frequency. Carson's rule gives the band holding about 98 % of the FM power.</p>
+          </div>
+        </article>
+
+        <article id="learn-constellation" class="learn">
+          <h3>5. Digital Modulation and Constellations</h3>
+          <p>Digital radios send <strong>symbols</strong>: each is one point in the I/Q plane (the amplitude and phase of the carrier) and carries k = log₂ M bits. The <strong>constellation</strong> diagram shows all M points with the bits each represents; Gray coding gives neighbouring points bit patterns that differ in one bit, so the most likely mistake costs only one bit. More points carry more bits per symbol, but they sit closer together, so noise pushes the received point across a boundary more easily.</p>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <label for="const-scheme">Modulation<select id="const-scheme"></select></label>
+              <label for="const-bits">Bits to send<textarea id="const-bits" rows="3" spellcheck="false">0001101110110100</textarea></label>
+              <button type="button" id="const-random">Random Bits</button>
+              <label for="const-ebn0">Eb/N₀ (signal to noise per bit) <output id="const-ebn0-out"></output><input type="range" id="const-ebn0" min="0" max="30" step="1" value="12" data-unit="dB"></label>
+              <label class="check"><input type="checkbox" id="const-noise" checked> Show received symbols with noise</label>
+              <p class="hint">Green points are the symbols your bits use. Blue dots are received symbols after noise; orange ones crossed into a neighbour's area and were decoded wrongly. For 64QAM, point at a symbol to see its bits.</p>
+            </div>
+            <div class="learn-plots">
+              <div id="const-chart" class="chart constellation"></div>
+              <div id="const-readout"></div>
+            </div>
+          </div>
+          <h4>Your bits as symbols</h4>
+          <div id="const-iq" class="chart"></div>
+          <p class="legend"><span>━━ I (in-phase)</span><span>┄ Q (quadrature)</span></p>
+          <div id="const-symbols" class="table-wrap"></div>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:learn-bits --><div class="eq"><math display="block"><mrow><mi>k</mi><mo>&#x0003D;</mo><msub><mi>log</mi><mn>2</mn></msub><mi>M</mi><mo>&#x0002C;</mo><mspace width="1em" /><mfrac><mrow><msub><mi>E</mi><mi>s</mi></msub></mrow><mrow><msub><mi>N</mi><mn>0</mn></msub></mrow></mfrac><mo>&#x0003D;</mo><mi>k</mi><mfrac><mrow><msub><mi>E</mi><mi>b</mi></msub></mrow><mrow><msub><mi>N</mi><mn>0</mn></msub></mrow></mfrac></mrow></math></div><!-- /eq -->
+            <!-- eq:learn-ber-psk --><div class="eq"><math display="block"><mrow><msubsup><mi>P</mi><mi>b</mi><mrow><mtext>BPSK,&#x000A0;QPSK</mtext></mrow></msubsup><mo>&#x0003D;</mo><mi>Q</mi><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><msqrt><mrow><mn>2</mn><msub><mi>E</mi><mi>b</mi></msub><mo>&#x0002F;</mo><msub><mi>N</mi><mn>0</mn></msub></mrow></msqrt><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mo>&#x0002C;</mo><mspace width="1em" /><msubsup><mi>P</mi><mi>b</mi><mrow><mi>M</mi><mtext>-PSK</mtext></mrow></msubsup><mo>&#x02248;</mo><mfrac><mrow><mn>2</mn></mrow><mrow><mi>k</mi></mrow></mfrac><mi>Q</mi><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><msqrt><mrow><mn>2</mn><mi>k</mi><msub><mi>E</mi><mi>b</mi></msub><mo>&#x0002F;</mo><msub><mi>N</mi><mn>0</mn></msub></mrow></msqrt><mi>sin</mi><mspace width="0.167em" /><mfrac><mrow><mi>&#x003C0;</mi></mrow><mrow><mi>M</mi></mrow></mfrac><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow></mrow></math></div><!-- /eq -->
+            <!-- eq:learn-ber-qam --><div class="eq"><math display="block"><mrow><msubsup><mi>P</mi><mi>b</mi><mrow><mi>M</mi><mtext>-QAM</mtext></mrow></msubsup><mo>&#x02248;</mo><mfrac><mrow><mn>4</mn></mrow><mrow><mi>k</mi></mrow></mfrac><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mn>1</mn><mo>&#x02212;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><msqrt><mrow><mi>M</mi></mrow></msqrt></mrow></mfrac><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mi>Q</mi><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><msqrt><mrow><mfrac><mrow><mn>3</mn><mi>k</mi></mrow><mrow><mi>M</mi><mo>&#x02212;</mo><mn>1</mn></mrow></mfrac><mfrac><mrow><msub><mi>E</mi><mi>b</mi></msub></mrow><mrow><msub><mi>N</mi><mn>0</mn></msub></mrow></mfrac></mrow></msqrt><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow></mrow></math></div><!-- /eq -->
+            <p class="caption">M: number of points; E<sub>s</sub>, E<sub>b</sub>: energy per symbol and per bit; N<sub>0</sub>: noise density; Q: Gaussian tail probability. The BPSK and QPSK error rate is exact; the 8PSK and square QAM ones are the usual approximations with Gray coding. The required Eb/N₀ in the link budget's data rate section comes from curves like these.</p>
+          </div>
         </article>
       </section>
 
