@@ -6,7 +6,9 @@ import { t } from './i18n.mjs';
 const HELP = {
   // Link
   v0: 'Carrier frequency of the link, from the radio or the frequency plan; choose GHz or MHz on the right.',
-  v1: 'Straight-line distance between the two antennas. For a satellite, the slant range at the elevation you design for; directly overhead, the orbit altitude. Unknown: measure it on a map, or use the orbit altitude.',
+  v1: 'Straight-line distance between the two antennas. For a satellite, the slant range at the elevation you design for; directly overhead, the orbit altitude. Unknown: measure it on a map, or use the slant range calculator below.',
+  'orbit-altitude': 'Height of the satellite above sea level: about 400 to 600 km for low Earth orbit (the ISS is at about 420 km), 20 200 km for GPS and 35 786 km for geostationary satellites. From the satellite operator or its orbital elements.',
+  'slant-elevation': 'Angle of the satellite above the horizon at the ground station. 90° overhead gives the shortest distance; for the worst case, use the minimum operating elevation, often 10°. Also sets the elevation under the shared conditions.',
 
   // Additional path losses
   'loss-polarization': 'Loss when the two antennas’ polarizations do not match. Same polarization at both ends: 0. Linear to circular: 3 dB. Unknown, or a rotating satellite with linear antennas: 3 dB. Or use the calculator below.',
@@ -92,6 +94,10 @@ const HELP = {
   'mp-terrain': 'Average ground altitude along the path, excluding trees, from a topographic map. Unknown: the average of the two antenna sites’ ground altitudes.',
   'mp-logk': 'How prone the region is to multipath fading, from the ITU-R P.530 map. Unknown: keep the Taipei value.',
   'mp-dn75': 'Refractivity change over the lowest 75 m of the atmosphere, from the ITU-R P.530 map. Unknown: keep the Taipei value.',
+  // Sky noise estimator (Noise and SNR)
+  'sky-atten': 'Atmospheric attenuation on the path at the same time percentage, excluding scintillation: the Atmospheric and rain loss plus the Cloud and fog loss. The button takes them from the calculation.',
+  'sky-tmr': 'Effective temperature of the atmosphere that emits the noise. Unknown: 275 K (ITU-R P.618).',
+  'sky-ground': 'Noise from the warm ground picked up through the sidelobes and spillover. Unknown: 0 for a high-gain dish at high elevation; 10 to 50 K for a small or wide-beam antenna, or at low elevation.',
 };
 
 /** Adds each field's help under it. Run once the generated fields exist. */

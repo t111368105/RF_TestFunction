@@ -627,17 +627,19 @@ function showResult(key, notes) {
 }
 
 /**
- * Recalculates the values still in their loss fields for a new link frequency or distance, with the
- * conditions they were calculated with. Values edited by hand are left alone, and so are the
- * calculations while the link is invalid (they stay marked as outdated).
+ * Recalculates the values still in their loss fields for a new link frequency or distance, and on
+ * Earth–space paths a new elevation, with the other conditions they were calculated with. Values
+ * edited by hand are left alone, and so are the calculations while the link is invalid (they stay
+ * marked as outdated).
  */
-export function refreshEstimates({ fMHz, distanceKm }, fill) {
+export function refreshEstimates({ fMHz, distanceKm, elevation }, fill) {
   for (const [key, r] of Object.entries(records)) {
     if (!r?.inputs || $('loss-' + key).value.trim() !== r.value) continue;
-    if (r.inputs.fMHz === fMHz && r.inputs.distanceKm === distanceKm) continue;
     // A value calculated for the other path type no longer applies; it stays marked as outdated.
     if (r.inputs.path !== $('atmo-path').value) continue;
-    const i = { ...r.inputs, fMHz, distanceKm };
+    const el = r.inputs.path === 'slant' && elevation !== undefined ? elevation : r.inputs.elevation;
+    if (r.inputs.fMHz === fMHz && r.inputs.distanceKm === distanceKm && r.inputs.elevation === el) continue;
+    const i = { ...r.inputs, fMHz, distanceKm, elevation: el };
     const e = estimateItem(key, i);
     if (e.error) continue;
     records[key] = { ...e.result, inputs: i };
@@ -645,6 +647,56 @@ export function refreshEstimates({ fMHz, distanceKm }, fill) {
     showResult(key, e.notes);
   }
   persist();
+}
+
+/** Sets the shared conditions to an Earth–space path at elevation el°. */
+export function setSlantElevation(el) {
+  $('atmo-path').value = 'slant';
+  $('atmo-elevation').value = String(el);
+  showPathFields();
+  highlightSiteValues();
+  persist();
+}
+
+/**
+ * Each item of a calculation recalculated with changed inputs: change(inputs) returns the new
+ * inputs. Gives { key: dB }, with null where the new inputs are out of the model's range.
+ */
+export function reestimate(estimate, change) {
+  const items = normalize(estimate)?.items ?? {};
+  return Object.fromEntries(
+    Object.entries(items).map(([key, r]) => {
+      if (!r.inputs) return [key, null];
+      const e = estimateItem(key, change(r.inputs));
+      return [key, e.error ? null : Number(e.result.value)];
+    }),
+  );
+}
+
+/**
+ * Inputs for another time percentage p. Cloud liquid water and the radome rain rate follow it when
+ * they held the Taipei value for the original percentage, as the fields do.
+ */
+export function atPercent(i, p) {
+  const follows = (id, value) => value === Number(PERCENT_DEPENDENT[id](i.percent));
+  return {
+    ...i,
+    percent: p,
+    cloudWater: follows('atmo-cloud', i.cloudWater) ? Number(PERCENT_DEPENDENT['atmo-cloud'](p)) : i.cloudWater,
+    radomeRain: follows('atmo-radome-rain', i.radomeRain) ? Number(PERCENT_DEPENDENT['atmo-radome-rain'](p)) : i.radomeRain,
+  };
+}
+
+/** Surface temperature (°C) under the shared conditions, or null. */
+export function surfaceTemperature() {
+  const v = number($('atmo-temp').value);
+  return Number.isFinite(v) ? v : null;
+}
+
+/** Station altitude (km) under the shared conditions; 0 when blank or invalid. */
+export function stationAltitude() {
+  const v = number($('atmo-altitude-m').value) / 1000;
+  return Number.isFinite(v) ? v : 0;
 }
 
 const fieldsHtml = (fields) => fields.map(([id, label, value, unit, extra, , signed]) => field(id, t(label), value, unit, extra, signed)).join('');

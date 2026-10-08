@@ -17,10 +17,13 @@ import { $, esc, fmt, fmtRate, notice, read, write, field, table, bindUnit, newI
 import { distanceChart } from './chart.mjs';
 import { reportHtml, inputRows, linkOptions, eirpCheck, eirpWarning, STALE_ESTIMATE } from './report.mjs';
 import { initMeasurements, showMeasurements, chartMeasurements } from './measurements.mjs';
-import { initEstimator, currentEstimate, restoreEstimate, refreshEstimates } from './estimator.mjs';
+import { initEstimator, currentEstimate, restoreEstimate, refreshEstimates, surfaceTemperature } from './estimator.mjs';
 import { initLossCalculators, currentLossCalcs, restoreLossCalcs, refreshLossCalcs } from './loss-calculators.mjs';
 import { LOSS_GROUPS, LOSS_ITEMS, lossItemsOf } from './path-losses.mjs';
 import { attachHelp } from './help.mjs';
+import { initSlant, currentOrbit } from './slant.mjs';
+import { initPass, showPass, showAvailability } from './pass.mjs';
+import { skyTemperature } from './satellite.mjs';
 import { t, locale } from './i18n.mjs';
 
 const COUNT = labels.length;
@@ -218,6 +221,7 @@ function calculate(e) {
       atmosphereEstimate: estimate?.estimate ?? null,
       lossCalcs: currentLossCalcs(),
       atmosphereStale: !!estimate?.stale,
+      orbit: currentOrbit(v[1]),
     });
     $('error').textContent = '';
     showSnapshot();
@@ -324,7 +328,17 @@ function showSnapshot() {
   $('nf-from-parts').checked = !!snapshot.nfFromParts;
   showMeasurements(snapshot);
   drawChart(true);
+  showPass(snapshot);
+  showAvailability(snapshot);
+  if ($('sky-atten').value.trim() === '') $('sky-atten').value = pathAbsorption();
   updateAnalysis();
+}
+
+/** The atmospheric and cloud losses of the shown calculation (dB), as text. */
+function pathAbsorption() {
+  const items = lossItemsOf(snapshot);
+  const total = number(items.atmospheric) + number(items.cloud);
+  return Number.isFinite(total) ? String(Number(total.toFixed(3))) : '';
 }
 
 /** Copies the analysis fields from the page into the snapshot. */
@@ -536,6 +550,7 @@ function buildForm() {
   }
   // Each single-field calculator sits under its own field, in the same grid cell.
   const calculators = [
+    ['v1', 'slant-calc'],
     ['loss-polarization', 'pol-calc'],
     ['loss-pointing', 'point-calc'],
     ...[
@@ -604,6 +619,47 @@ function buildAnalysisFields() {
     [['1', 'bit/s'], ['1000', 'kbit/s'], ['1000000', 'Mbit/s']],
     '1000',
   );
+  buildSkyCalculator();
+}
+
+/** The sky noise estimator under the antenna noise temperature field. */
+function buildSkyCalculator() {
+  const label = $('antenna-temp').closest('label');
+  const cell = Object.assign(document.createElement('div'), { className: 'loss-cell' });
+  label.replaceWith(cell);
+  cell.append(label, $('sky-calc'));
+  $('sky-calc-fields').insertAdjacentHTML(
+    'beforeend',
+    field('sky-atten', t('Atmospheric attenuation A'), '', 'dB', `placeholder="${t('e.g. {value}', { value: 2 })}"`) +
+      field('sky-tmr', t('Mean radiating temperature T_mr'), '275', 'K', '') +
+      field('sky-ground', t('Ground pickup T_g'), '0', 'K', ''),
+  );
+  $('sky-calc-path').onclick = () => {
+    if (snapshot) $('sky-atten').value = pathAbsorption();
+  };
+  $('sky-calc-run').onclick = () => {
+    const out = $('sky-calc-result');
+    const a = number($('sky-atten').value);
+    const tmr = number($('sky-tmr').value);
+    const ground = number($('sky-ground').value);
+    if (!(a >= 0 && tmr > 0 && ground >= 0)) {
+      out.innerHTML = `<p class="error">${t('Enter an attenuation of 0 dB or more, a positive T_mr and a ground pickup of 0 K or more.')}</p>`;
+      return;
+    }
+    const sky = skyTemperature(a, tmr);
+    const total = String(Number((sky + ground).toFixed(1)));
+    $('antenna-temp').value = total;
+    $('antenna-temp').dispatchEvent(new Event('input'));
+    const ts = surfaceTemperature();
+    out.innerHTML =
+      `<p>${t('Sky {sky} K + ground {ground} K = {total} K, filled in above.', { sky: fmt(sky, 1), ground: fmt(ground, 1), total })}</p>` +
+      (ts === null
+        ? ''
+        : `<p class="hint">${t('In clear or cloudy weather at {temperature} °C, T_mr ≈ {tmr} K.', {
+            temperature: fmt(ts),
+            tmr: fmt(37.34 + 0.81 * (ts + 273.15), 1),
+          })}</p>`);
+  };
 }
 
 const powerUnits = (value, from, to) => (from === to ? value : convertPower(value, to === 'W'));
@@ -637,14 +693,15 @@ export function initBudget({ addPlan }) {
   };
   initLossCalculators({ link, fill });
   initEstimator({ link, fill });
+  initSlant({ fill });
   attachHelp();
-  // Calculated losses follow the link frequency and distance.
+  // Calculated losses follow the link frequency and distance, and the elevation of an Earth–space path.
   const refresh = () => {
     const l = link();
-    refreshEstimates(l, fill);
+    refreshEstimates({ ...l, elevation: number($('atmo-elevation').value) }, fill);
     refreshLossCalcs(l.fMHz, fill);
   };
-  for (const id of ['v0', 'v1', 'frequency-unit', 'distance-unit']) $(id).addEventListener('input', refresh);
+  for (const id of ['v0', 'v1', 'frequency-unit', 'distance-unit', 'atmo-elevation']) $(id).addEventListener('input', refresh);
   for (const id of ['frequency-unit', 'distance-unit']) $(id).addEventListener('change', refresh);
 
   $('budget-form').onsubmit = calculate;
@@ -653,6 +710,8 @@ export function initBudget({ addPlan }) {
   updateLossTotal();
 
   buildAnalysisFields();
+  attachHelp();
+  initPass();
   unitResets.push(bindUnit('bandwidth-unit', 'bandwidth', updateAnalysis));
   unitResets.push(bindUnit('data-rate-unit', 'data-rate', updateAnalysis));
   for (const [id] of META) $(id).oninput = updateAnalysis;

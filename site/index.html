@@ -88,6 +88,21 @@
             <article>
               <h2>02 <span>Path</span></h2>
               <div id="path" class="fields"></div>
+              <!-- Moved under the Distance field by budget.mjs; its fields come from slant.mjs. -->
+              <details class="estimator" id="slant-calc">
+                <summary>Calculate the slant range to a satellite</summary>
+                <div id="slant-calc-fields" class="fields"></div>
+                <div class="actions">
+                  <button type="button" id="slant-calc-run">Calculate and Fill</button>
+                </div>
+                <div id="slant-calc-result" aria-live="polite"></div>
+                <p class="hint">Also sets the shared conditions under Atmosphere and ionosphere to an Earth–space path at this elevation, so the distance and every estimate use the same geometry. Changing the elevation there afterwards updates the distance too.</p>
+                <div class="formulas">
+                  <h4>Formulas</h4>
+                  <!-- eq:slant-range --><div class="eq"><math display="block"><mrow><mi>d</mi><mo>&#x0003D;</mo><msqrt><mrow><mo stretchy="false">&#x00028;</mo><msub><mi>R</mi><mi>e</mi></msub><mo>&#x0002B;</mo><mi>H</mi><msup><mo stretchy="false">&#x00029;</mo><mn>2</mn></msup><mo>&#x02212;</mo><mo stretchy="false">&#x00028;</mo><msub><mi>R</mi><mi>e</mi></msub><mo>&#x0002B;</mo><msub><mi>h</mi><mi>s</mi></msub><msup><mo stretchy="false">&#x00029;</mo><mn>2</mn></msup><msup><mi>cos</mi><mn>2</mn></msup><mspace width="0.167em" /><mi>&#x003B8;</mi></mrow></msqrt><mo>&#x02212;</mo><mo stretchy="false">&#x00028;</mo><msub><mi>R</mi><mi>e</mi></msub><mo>&#x0002B;</mo><msub><mi>h</mi><mi>s</mi></msub><mo stretchy="false">&#x00029;</mo><mi>sin</mi><mspace width="0.167em" /><mi>&#x003B8;</mi></mrow></math></div><!-- /eq -->
+                  <p class="caption">R<sub>e</sub> = 6371 km; H: satellite altitude; h<sub>s</sub>: station altitude from the shared conditions; θ: elevation.</p>
+                </div>
+              </details>
               <h3 class="subhead">Additional path losses</h3>
               <h4 class="loss-group">Antenna alignment</h4>
               <div id="losses-alignment" class="fields"></div>
@@ -384,7 +399,7 @@
               <h3>Distance and Coverage</h3>
               <strong id="max-distance"></strong>
             </div>
-            <div id="chart"></div>
+            <div id="chart" class="chart"></div>
             <p class="legend">
               <span>━━ Predicted power</span>
               <span>┄ Sensitivity</span>
@@ -397,8 +412,58 @@
             <p id="distance-readout" class="mono"></p>
           </article>
           <article>
+            <h3>Satellite Pass: Margin versus Elevation</h3>
+            <p id="pass-missing" class="hint">For a satellite link, calculate the distance with the slant range calculator under Distance; this chart then shows how the margin changes over a pass.</p>
+            <div id="pass-body">
+              <div id="pass-chart" class="chart"></div>
+              <p class="legend">
+                <span>━━ Link margin</span>
+                <span>┄ Receiver sensitivity (0 dB)</span>
+                <span>┄ Required margin</span>
+              </p>
+              <label for="pass-slider">Inspect elevation</label>
+              <input id="pass-slider" type="range" step="any">
+              <p id="pass-readout" class="mono"></p>
+              <div id="pass-results"></div>
+              <p class="hint">Each elevation uses the slant range to the same orbit and recalculates the estimated losses under their fields (gas and rain, cloud, scintillation, building, clutter and so on) at that elevation. Losses entered by hand stay as they are. In heavy rain the ITU-R P.618 rain attenuation rises again near 90°, so the margin need not grow all the way to the zenith.</p>
+            </div>
+          </article>
+          <article>
+            <h3>Availability: Margin versus Time</h3>
+            <p id="availability-missing" class="hint">Estimate a time-dependent loss first (Atmospheric and rain, cloud, tropospheric scintillation, wet radome or multipath); this chart then shows the margin over the percentage of time and the resulting availability.</p>
+            <div id="availability-body">
+              <div id="availability-chart" class="chart"></div>
+              <p class="legend">
+                <span>━━ Link margin</span>
+                <span>┄ Receiver sensitivity (0 dB)</span>
+                <span>┄ Required margin</span>
+              </p>
+              <label for="availability-slider">Inspect percentage of time (log scale)</label>
+              <input id="availability-slider" type="range" step="any">
+              <p id="availability-readout" class="mono"></p>
+              <div id="availability-results"></div>
+              <p class="hint">The availability is the share of the year the link margin stays above the level. The estimated time-dependent losses are recalculated at each percentage; the Taipei cloud and radome rain values follow it. They are added at the same percentage, as in the budget above, which is conservative: ITU-R P.618 combines rain, cloud and scintillation statistically.</p>
+            </div>
+          </article>
+          <article>
             <h3>Noise and SNR</h3>
             <div id="noise-fields" class="fields"></div>
+            <!-- Moved under the antenna noise temperature field by budget.mjs. -->
+            <details class="estimator" id="sky-calc">
+              <summary>Estimate the antenna temperature from the sky (ITU-R P.618)</summary>
+              <div id="sky-calc-fields" class="fields"></div>
+              <div class="actions">
+                <button type="button" id="sky-calc-path">Use the Path's Atmospheric and Cloud Loss</button>
+                <button type="button" id="sky-calc-run">Calculate and Fill</button>
+              </div>
+              <div id="sky-calc-result" aria-live="polite"></div>
+              <p class="hint">For a ground station antenna looking at the sky. The atmosphere that attenuates the signal also emits noise, so rain raises the antenna temperature as well as the loss. Use the attenuation at the same time percentage as the losses above.</p>
+              <div class="formulas">
+                <h4>Formulas</h4>
+                <!-- eq:sky-temperature --><div class="eq"><math display="block"><mrow><msub><mi>T</mi><mi>a</mi></msub><mo>&#x0003D;</mo><msub><mi>T</mi><mrow><mi>m</mi><mi>r</mi></mrow></msub><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mn>1</mn><mo>&#x02212;</mo><msup><mn>10</mn><mrow><mo>&#x02212;</mo><mi>A</mi><mo>&#x0002F;</mo><mn>10</mn></mrow></msup><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mo>&#x0002B;</mo><mn>2.7</mn><mo>&#x000B7;</mo><msup><mn>10</mn><mrow><mo>&#x02212;</mo><mi>A</mi><mo>&#x0002F;</mo><mn>10</mn></mrow></msup><mo>&#x0002B;</mo><msub><mi>T</mi><mi>g</mi></msub></mrow></math></div><!-- /eq -->
+                <p class="caption">A: atmospheric attenuation excluding scintillation (dB); T<sub>mr</sub>: mean radiating temperature, 275 K without local data, or 37.34 + 0.81 T<sub>s</sub> (K) in clear or cloudy weather; T<sub>g</sub>: ground pickup through sidelobes and spillover.</p>
+              </div>
+            </details>
             <div id="noise-results" aria-live="polite"></div>
             <div class="formulas">
               <h4>Formulas</h4>

@@ -100,6 +100,9 @@ FORMULAS = {
     "mp-p0": r"p_0 = K d^{3.51} \left(f^2 + 13\right)^{0.447} 10^{-0.376 \tanh\left(\frac{h_c - 147}{125}\right) - 0.334 |\varepsilon_p|^{0.39} - 0.00027 h_L + 17.85 v_{sr}}",
     "mp-terms": r"|\varepsilon_p| = \frac{|h_r - h_e|}{d}, \quad h_c = \frac{h_r + h_e}{2} - \frac{d^2}{102} - h_t, \quad v_{sr} = \min\left[\left(\frac{dN_{75}}{50}\right)^{1.8} e^{-h_c/(2.5\sqrt{d})},\ \frac{dN_{75}\, d^{1.5} f^{0.5}}{24730}\right]",
     "mp-fade": r"p_w = p_0\, 10^{-A/10} \quad (A \ge A_t = 25 + 1.2 \log_{10} p_0), \quad p_w = Q\, p, \quad Q = 2.85\, p^{-0.13} \le 12",
+    # Satellite geometry and sky noise
+    "slant-range": r"d = \sqrt{(R_e + H)^2 - (R_e + h_s)^2 \cos^2 \theta} - (R_e + h_s) \sin \theta",
+    "sky-temperature": r"T_a = T_{mr}\left(1 - 10^{-A/10}\right) + 2.7 \cdot 10^{-A/10} + T_g",
 }
 
 MARKER = re.compile(r"<!-- eq:([\w-]+) -->.*?<!-- /eq -->", re.S)

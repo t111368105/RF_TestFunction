@@ -67,7 +67,7 @@ export function distanceChart(v, measured = { points: [], fit: null }) {
     marker(center, t('Link distance'), 32) +
     (r.maxDistance && Math.log10(r.maxDistance) <= hi ? marker(Math.log10(r.maxDistance), t('Max distance'), 48) : '') +
     // Moved by cursorAt() as the distance slider changes.
-    `<g id="chart-cursor"><line x1="0" x2="0" y1="${BOTTOM - HEIGHT}" y2="${BOTTOM}"/><circle r="6"/></g>` +
+    `<g id="chart-cursor" class="chart-cursor"><line x1="0" x2="0" y1="${BOTTOM - HEIGHT}" y2="${BOTTOM}"/><circle r="6"/></g>` +
     `<text x="70" y="22">${t('Receiver input (dBm)')}</text>` +
     `<text x="480" y="325" text-anchor="middle">${t('Distance (km, log scale)')}</text></svg>`;
 

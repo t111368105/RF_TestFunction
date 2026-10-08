@@ -587,43 +587,43 @@ button:disabled {
   margin-top: 42px;
 }
 
-#chart svg {
+.chart svg {
   display: block;
   width: 100%;
   height: auto;
   min-height: 210px;
 }
 
-#chart text {
+.chart text {
   fill: var(--muted);
   font-size: 14px;
 }
 
-#chart .grid {
+.chart .grid {
   stroke: var(--line);
 }
 
-#chart .marker {
+.chart .marker {
   stroke: var(--muted);
   stroke-dasharray: 2 4;
 }
 
-#chart .marker-label {
+.chart .marker-label {
   font-size: 12px;
 }
 
-#chart-cursor line {
+.chart-cursor line {
   stroke: var(--blue);
   stroke-opacity: .35;
 }
 
-#chart-cursor circle {
+.chart-cursor circle {
   fill: var(--blue);
   stroke: var(--surface);
   stroke-width: 2;
 }
 
-#chart .near-field {
+.chart .near-field {
   fill: var(--line);
   opacity: .5;
 }
