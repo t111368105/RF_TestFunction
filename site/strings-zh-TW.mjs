@@ -707,4 +707,6 @@ export const ZH_TW = {
   "Check the inputs": "請檢查輸入",
   "Enter the parameters; the results update as you type.": "輸入參數後，結果會隨輸入即時更新。",
   "Parameters loaded and calculated.": "已載入參數並完成計算。",
+  "The far end is only {height} above the station, inside the atmosphere, so only the part of the path below it is counted.": "另一端只比測站高 {height}，仍在大氣層內，因此只計入它以下那段路徑。",
+  "The far end is below the ionosphere (about 60 km) → 0 dB.": "另一端低於電離層（約 60 km）→ 0 dB。",
 };

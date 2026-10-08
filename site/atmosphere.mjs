@@ -331,14 +331,17 @@ export function cloudAttenuation(f, el, L) {
  * for an antenna of diameter D (m) and efficiency eta; nWet is the wet term of the radio refractivity
  * (P.453). D = 0 means no aperture averaging.
  */
-export function tropoScintillation(f, el, p, D, eta, nWet) {
+export function tropoScintillation(f, el, p, D, eta, nWet, pathM = Infinity) {
   const sigmaRef = 3.6e-3 + 1e-4 * nWet;
   const sinEl = Math.sin(el * RAD);
   const L = (2 * 1000) / (Math.sqrt(sinEl ** 2 + 2.35e-4) + sinEl); // m, turbulence height 1000 m
+  // A path that ends inside the turbulent layer crosses only pathM of it; the log-amplitude
+  // standard deviation grows as the path length to the power 11/12.
+  const partial = Math.min(1, pathM / L) ** (11 / 12);
   const x = (1.22 * (Math.sqrt(eta) * D) ** 2 * f) / L;
   const g =
     x >= 7 ? 0 : Math.sqrt(3.86 * (x ** 2 + 1) ** (11 / 12) * Math.sin((11 / 6) * Math.atan2(1, x)) - 7.08 * x ** (5 / 6));
-  const sigma = (sigmaRef * f ** (7 / 12) * g) / sinEl ** 1.2;
+  const sigma = (partial * sigmaRef * f ** (7 / 12) * g) / sinEl ** 1.2;
   const lp = Math.log10(p);
   const a = -0.061 * lp ** 3 + 0.072 * lp ** 2 - 1.71 * lp + 3;
   return a * sigma;
@@ -478,6 +481,26 @@ export function waterFilmLoss(f, t, tempC) {
  *   elevation, stationAltitude (km), latitude, rainHeight (km) (slant only) }.
  * Returns { gas, oxygen, water, rain, total, notes } in dB, or { error }.
  */
+// Below this rise (km) the far end of an Earth–space path counts as inside the atmosphere.
+export const INSIDE_ATMOSPHERE = 30;
+
+/** The note for a far end inside the atmosphere. */
+export function insideAtmosphere(rise) {
+  return t('The far end is only {height} above the station, inside the atmosphere, so only the part of the path below it is counted.', {
+    height: rise < 1 ? `${Number((rise * 1000).toPrecision(3))} m` : `${Number(rise.toPrecision(3))} km`,
+  });
+}
+
+/**
+ * Height (km) that a path of distanceKm at elevation el° rises above a station stationKm above sea
+ * level, over a spherical Earth; Infinity when the distance is not given.
+ */
+export function pathRise(distanceKm, el, stationKm = 0) {
+  if (!Number.isFinite(distanceKm)) return Infinity;
+  const rs = EARTH_RADIUS + stationKm;
+  return Math.sqrt(distanceKm ** 2 + rs ** 2 + 2 * distanceKm * rs * Math.sin(el * RAD)) - rs;
+}
+
 export function estimateAtmosphere(o) {
   const f = o.fMHz / 1000;
   const slant = o.path === 'slant';
@@ -505,10 +528,15 @@ export function estimateAtmosphere(o) {
   const gamma = gasSpecificAttenuation(f, o.pressure, T, o.waterVapour);
   let oxygen;
   let water;
+  // An Earth–space path whose far end is still inside the atmosphere (a short distance, an aircraft
+  // or a drone) crosses only the air and rain below that end. With the exponential profiles behind
+  // the equivalent heights, the gas loss up to a rise r is (1 − e^(−r/h)) of the full column.
+  const rise = slant ? pathRise(o.distanceKm, o.elevation, o.stationAltitude) : Infinity;
   if (slant) {
     const h = gasEquivalentHeights(f, o.pressure, T, o.waterVapour);
-    oxygen = (gamma.oxygen * h.oxygen) / Math.sin(o.elevation * RAD);
-    water = (gamma.water * h.water) / Math.sin(o.elevation * RAD);
+    oxygen = (gamma.oxygen * h.oxygen * -Math.expm1(-rise / h.oxygen)) / Math.sin(o.elevation * RAD);
+    water = (gamma.water * h.water * -Math.expm1(-rise / h.water)) / Math.sin(o.elevation * RAD);
+    if (rise < INSIDE_ATMOSPHERE) notes.push(insideAtmosphere(rise));
   } else {
     oxygen = gamma.oxygen * o.distanceKm;
     water = gamma.water * o.distanceKm;
@@ -516,7 +544,8 @@ export function estimateAtmosphere(o) {
   const tau = POLARIZATION_TILT[o.polarization];
   let rain;
   if (slant) {
-    rain = rainSlant(f, o.elevation, o.stationAltitude, o.latitude, o.rainHeight, o.rainRate, o.percent, tau);
+    const top = Math.min(o.rainHeight, o.stationAltitude + rise);
+    rain = rainSlant(f, o.elevation, o.stationAltitude, o.latitude, top, o.rainRate, o.percent, tau);
   } else {
     const terrestrial = rainTerrestrial(f, o.distanceKm, o.rainRate, o.percent, tau);
     rain = terrestrial.attenuation;

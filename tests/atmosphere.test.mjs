@@ -17,6 +17,7 @@ import {
   waterViscosity,
   radomeFilmThickness,
   waterFilmLoss,
+  pathRise,
 } from '../site/atmosphere.mjs';
 
 const close = (a, b) => assert.ok(Math.abs(a - b) <= 1e-12 * Math.max(1, Math.abs(b)), `${a} != ${b}`);
@@ -126,6 +127,7 @@ test('Estimator totals, validity notes and input checks', () => {
   const slant = estimateAtmosphere({
     ...terrestrial,
     path: 'slant',
+    distanceKm: 1000,
     elevation: 30,
     stationAltitude: 0.1,
     latitude: 25,
@@ -224,4 +226,36 @@ test('Log-percentage interpolation', () => {
   close(interpolateLogP([0.1, 1], [4, 3], Math.sqrt(0.1)), 3.5);
   close(interpolateLogP([0.1, 1], [4, 3], 0.01), 4);
   close(interpolateLogP([0.1, 1], [4, 3], 5), 3);
+});
+
+test('Earth–space paths that end inside the atmosphere count only the part below the far end', () => {
+  // A 5 m path at 10° rises about 0.87 m.
+  const rise = pathRise(0.005, 10);
+  assert.ok(Math.abs(rise - 0.005 * Math.sin(Math.PI / 18)) < 1e-8, `${rise}`); // Within the Earth-curvature term.
+  assert.equal(pathRise(undefined, 10), Infinity);
+  const link = {
+    ...terrestrial,
+    fMHz: 60000,
+    path: 'slant',
+    elevation: 10,
+    stationAltitude: 0.014,
+    latitude: 25.04,
+    rainHeight: 4.67,
+  };
+  const short = estimateAtmosphere({ ...link, distanceKm: 0.005 });
+  const g = gasSpecificAttenuation(60, 1013.25, 288.15, 7.5);
+  // Close to the surface the slant gas loss is the specific attenuation times the distance.
+  assert.ok(Math.abs(short.gas - (g.oxygen + g.water) * 0.005) < 1e-4 * short.gas, `${short.gas}`);
+  assert.ok(short.total < 1, `${short.total}`);
+  assert.match(short.notes.join(' '), /inside the atmosphere/);
+  // A satellite far above the atmosphere gets the whole column, as before.
+  const full = estimateAtmosphere({ ...link, distanceKm: 2000 });
+  const h = gasEquivalentHeights(60, 1013.25, 288.15, 7.5);
+  close(full.gas, (g.oxygen * h.oxygen + g.water * h.water) / Math.sin(Math.PI / 18));
+  // Rain only up to the far end when it is below the rain height.
+  const plane = estimateAtmosphere({ ...link, fMHz: 20000, distanceKm: 10 });
+  close(plane.rain, rainSlant(20, 10, 0.014, 25.04, 0.014 + pathRise(10, 10, 0.014), 50, 0.01, 0));
+  // Scintillation over a path ending inside the 1 km turbulent layer is smaller.
+  assert.ok(tropoScintillation(20, 30, 0.01, 0, 0.5, 100, 50) < tropoScintillation(20, 30, 0.01, 0, 0.5, 100));
+  close(tropoScintillation(20, 30, 0.01, 0, 0.5, 100, 1e6), tropoScintillation(20, 30, 0.01, 0, 0.5, 100));
 });

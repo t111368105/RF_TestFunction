@@ -11,6 +11,9 @@ import {
   ionoAbsorption,
   radomeFilmThickness,
   waterFilmLoss,
+  pathRise,
+  insideAtmosphere,
+  INSIDE_ATMOSPHERE,
 } from './atmosphere.mjs';
 import {
   knifeEdge,
@@ -238,6 +241,7 @@ function describeItem(key, r) {
       },
     );
   }
+  if (r.belowIonosphere) return t('The far end is below the ionosphere (about 60 km) → 0 dB.');
   if (key === 'iono-scintillation') {
     if (r.none) return t('S4 left blank: no ionospheric scintillation → 0 dB.');
     return t(
@@ -326,6 +330,7 @@ function inputs(link) {
 }
 
 const rounded = (x) => String(Number(x.toFixed(3)));
+const IONOSPHERE_BASE = 60; // km
 
 /** One item's estimate: { result: { value, ... }, notes } or { error }. */
 function estimateItem(key, i) {
@@ -350,10 +355,16 @@ function estimateItem(key, i) {
   // The remaining items apply to Earth-space paths.
   if (i.path !== 'slant') return { error: t('Earth–space paths only: choose Earth–space under the shared conditions.') };
   if (!(i.elevation >= 5 && i.elevation <= 90)) return { error: t('Enter an elevation angle between 5° and 90°.') };
+  // How high the far end is above the station: a short path stays inside the atmosphere.
+  const rise = pathRise(i.distanceKm, i.elevation, i.stationAltitude);
+  const inside = rise < INSIDE_ATMOSPHERE;
   if (key === 'cloud') {
     if (!(i.cloudWater >= 0)) return { error: t('Enter a cloud liquid water content of 0 kg/m² or more.') };
     if (i.percent < 0.1) notes.push(t('The cloud maps start at 0.1 % of the time; enter the cloud liquid water for this percentage yourself.'));
-    return { result: { value: rounded(cloudAttenuation(f, i.elevation, i.cloudWater)) }, notes };
+    // Liquid cloud water lies below the freezing level, taken as spread evenly up to the rain height.
+    const share = Math.min(1, Math.max(0, rise / (i.rainHeight - i.stationAltitude)));
+    if (inside) notes.push(insideAtmosphere(rise));
+    return { result: { value: rounded(share * cloudAttenuation(f, i.elevation, i.cloudWater)) }, notes };
   }
   if (key === 'tropo-scintillation') {
     if (!(i.percent > 0)) return { error: t('Enter a positive percentage of time.') };
@@ -362,7 +373,13 @@ function estimateItem(key, i) {
     if (!(i.efficiency > 0 && i.efficiency <= 1)) return { error: t('Enter an antenna efficiency between 0 and 1.') };
     if (f < 4 || f > 20) notes.push(t('P.618 tropospheric scintillation is specified for 4 to 20 GHz; this is an extrapolation.'));
     if (i.percent < 0.01 || i.percent > 50) notes.push(t('P.618 tropospheric scintillation is specified for 0.01 % to 50 % of the time.'));
-    return { result: { value: rounded(tropoScintillation(f, i.elevation, i.percent, i.dish ?? 0, i.efficiency, i.nWet)) }, notes };
+    if (inside) notes.push(insideAtmosphere(rise));
+    const fade = tropoScintillation(f, i.elevation, i.percent, i.dish ?? 0, i.efficiency, i.nWet, i.distanceKm * 1000);
+    return { result: { value: rounded(fade) }, notes };
+  }
+  // The ionosphere starts at about 60 km; a far end below it sees none of it.
+  if ((key === 'iono-scintillation' || key === 'iono-absorption') && rise < IONOSPHERE_BASE) {
+    return { result: { value: '0', belowIonosphere: true }, notes };
   }
   if (key === 'iono-scintillation') {
     // A blank S4 is the documented way to leave scintillation out.
