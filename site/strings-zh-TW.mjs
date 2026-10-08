@@ -841,4 +841,5 @@ export const ZH_TW = {
   "Equivalent noise temperature": "等效雜訊溫度",
   "Compared with the noise floor above": "與上方底噪相比",
   "k = 1.380649 × 10<sup>−23</sup> J/K; −174 dBm/Hz is kT at 290 K. T<sub>e</sub>: noise temperature the receiver adds, from its noise figure F (linear). Log averaging reads noise about 2.5 dB low; a noise marker corrects it. In the Link Budget, the same calculation is under Noise and SNR, with an estimator of the antenna temperature from the sky.": "k = 1.380649 × 10<sup>−23</sup> J/K；−174 dBm/Hz 是 290 K 時的 kT。T<sub>e</sub>：接收機加入的雜訊溫度，由雜訊指數 F（線性值）求得。對數平均會讓雜訊讀值偏低約 2.5 dB，使用雜訊標記會自動修正。鏈路預算的「雜訊與 SNR」也做同樣的計算，並提供由天空估算天線雜訊溫度的工具。",
+  "The atmosphere and ionosphere items, vegetation and diffraction are estimated automatically from the frequency, distance and shared conditions. Type a value to override one (0 leaves it out); Calculate and Fill returns it to the estimate. Building entry, clutter, multipath, polarization and pointing apply only in particular situations, so calculate them when they do.": "大氣與電離層各項、植被和繞射，會依頻率、距離與共用條件自動估算。自行輸入數值即可覆蓋（填 0 表示不計入）；按「計算並填入」會恢復自動估算。建物穿透、地物遮蔽、多路徑、極化與指向只在特定情況才存在，需要時再自行計算。",
 };

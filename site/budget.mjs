@@ -18,7 +18,15 @@ import { $, esc, fmt, fmtRate, notice, read, write, field, table, bindUnit, newI
 import { distanceChart } from './chart.mjs';
 import { reportHtml, inputRows, linkOptions, eirpCheck, eirpWarning, STALE_ESTIMATE } from './report.mjs';
 import { initMeasurements, showMeasurements, chartMeasurements } from './measurements.mjs';
-import { initEstimator, currentEstimate, restoreEstimate, refreshEstimates, surfaceTemperature } from './estimator.mjs';
+import {
+  initEstimator,
+  currentEstimate,
+  restoreEstimate,
+  refreshEstimates,
+  surfaceTemperature,
+  typedItems,
+  restoreTypedItems,
+} from './estimator.mjs';
 import { initLossCalculators, currentLossCalcs, restoreLossCalcs, refreshLossCalcs } from './loss-calculators.mjs';
 import { LOSS_GROUPS, LOSS_ITEMS, lossItemsOf } from './path-losses.mjs';
 import { attachHelp } from './help.mjs';
@@ -313,12 +321,14 @@ function clearForm() {
     loaded,
     estimate: currentEstimate(v[0], v[1])?.estimate ?? null,
     lossCalcs: currentLossCalcs(),
+    typed: typedItems(),
   };
   for (const i of INPUTS) setFormValue('v' + i, defaults[i]);
   for (const { id } of LOSS_ITEMS) setFormValue(id, '0');
   setFormValue('eirp-limit', '');
-  // Forget the calculators' values too: a cleared 0 is the user's, and must not follow them.
+  // Start the calculators afresh: the automatic estimates fill in again once the link is known.
   restoreEstimate(null);
+  restoreTypedItems();
   restoreLossCalcs(null);
   loaded = null;
   invalidate();
@@ -329,6 +339,7 @@ function undoClear() {
   if (!undo) return;
   for (const [id, v] of Object.entries(undo.fields)) setFormValue(id, v);
   restoreEstimate(undo.estimate);
+  restoreTypedItems(undo.typed);
   restoreLossCalcs(undo.lossCalcs);
   loaded = undo.loaded;
   unitResets.forEach((reset) => reset());
@@ -589,7 +600,7 @@ export function loadPlan(p) {
   for (const { key, id } of LOSS_ITEMS) setFormValue(id, items[key]);
   setFormValue('amp-position', p.ampPosition === 'before' ? 'before' : 'after');
   setFormValue('eirp-limit', p.eirpLimit ?? '');
-  restoreEstimate(p.atmosphereEstimate);
+  restoreEstimate(p.atmosphereEstimate, { keepOthers: true });
   restoreLossCalcs(p.lossCalcs);
   snapshot = null;
   carried = null;
@@ -836,5 +847,6 @@ export function initBudget({ addPlan }) {
   $('distance-slider').oninput = inspectDistance;
   $('save').onclick = () => save(addPlan);
   $('pdf').onclick = print;
+  refresh();
   compute({ live: true });
 }

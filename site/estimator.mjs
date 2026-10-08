@@ -588,8 +588,39 @@ const DESCRIBE_TERRAIN = {
   },
 };
 
+// Items estimated on their own as soon as the link is known, unless the user typed a value. The
+// others apply only in particular situations (indoors, among buildings, long terrestrial links), so
+// they are calculated only on request.
+const AUTOMATIC = [
+  'atmospheric',
+  'cloud',
+  'tropo-scintillation',
+  'iono-scintillation',
+  'iono-absorption',
+  'radome',
+  'vegetation',
+  'diffraction',
+];
+let manual = new Set(); // Items whose value the user typed, which estimates leave alone.
+let filling = false; // Set while an estimate fills a field, to tell it from typing.
+
+/** Puts an estimated value into its loss field without marking the item as typed. */
+function put(fill, key, value) {
+  filling = true;
+  try {
+    fill('loss-' + key, value);
+  } finally {
+    filling = false;
+  }
+}
+
 function persist() {
-  write(STORAGE_KEY, { fields: Object.fromEntries(ids.map((id) => [id, $(id).value])), records, percentShown });
+  write(STORAGE_KEY, {
+    fields: Object.fromEntries(ids.map((id) => [id, $(id).value])),
+    records,
+    percentShown,
+    manual: [...manual],
+  });
 }
 
 const taipeiValue = (id) => (PERCENT_DEPENDENT[id] ? PERCENT_DEPENDENT[id](percentShown) : TAIPEI[id]);
@@ -632,8 +663,19 @@ export function currentEstimate(fMHz, distanceKm) {
 }
 
 /** Restores the calculations that a loaded plan was calculated with. */
-export function restoreEstimate(estimate) {
+export function restoreEstimate(estimate, { keepOthers = false } = {}) {
   records = normalize(estimate)?.items ?? {};
+  // A loaded plan keeps its own values: the items it did not calculate count as typed.
+  if (keepOthers) manual = new Set(Object.keys(ITEMS).filter((key) => !records[key]));
+  persist();
+}
+
+/** The items whose value the user typed, to restore after Undo. */
+export const typedItems = () => [...manual];
+
+/** Marks exactly these items as typed; none makes every automatic item estimate itself again. */
+export function restoreTypedItems(keys = []) {
+  manual = new Set(keys);
   persist();
 }
 
@@ -653,15 +695,27 @@ const sameInputs = (a, b) => JSON.stringify(a) === JSON.stringify(b);
  */
 export function refreshEstimates(link, fill) {
   const i = inputs(link);
-  for (const [key, r] of Object.entries(records)) {
-    if (!r?.inputs || $('loss-' + key).value.trim() !== r.value || sameInputs(r.inputs, i)) continue;
+  for (const key of Object.keys(ITEMS)) {
+    const r = records[key];
+    const field = $('loss-' + key).value.trim();
+    const follows = !!r?.inputs && field === r.value; // A calculated value still in its field.
+    const automatic = AUTOMATIC.includes(key) && !manual.has(key);
+    if (!follows && !automatic) continue;
+    if (follows && sameInputs(r.inputs, i)) continue;
     const e = estimateItem(key, i);
     if (e.error) {
-      if (r.inputs.path !== i.path) $(`calc-${key}-result`).innerHTML = `<p class="error">${e.error}</p>`;
+      if (automatic && ITEMS[key].slantOnly && i.path !== 'slant') {
+        // An Earth–space item on a terrestrial path does not apply: 0 dB.
+        delete records[key];
+        if (field !== '0') put(fill, key, '0');
+        $(`calc-${key}-result`).innerHTML = `<p class="hint">${e.error}</p>`;
+      } else if (r && r.inputs.path !== i.path) {
+        $(`calc-${key}-result`).innerHTML = `<p class="error">${e.error}</p>`;
+      }
       continue;
     }
     records[key] = { ...e.result, inputs: i };
-    fill('loss-' + key, e.result.value);
+    if (field !== e.result.value) put(fill, key, e.result.value);
     showResult(key, e.notes);
   }
   persist();
@@ -764,6 +818,7 @@ export function initEstimator({ link, fill }) {
   }
   if (saved.percentShown > 0) percentShown = saved.percentShown;
   records = saved.records ?? normalize(saved.last)?.items ?? {};
+  manual = new Set(saved.manual ?? []);
   showPathFields();
   highlightSiteValues();
 
@@ -810,9 +865,16 @@ export function initEstimator({ link, fill }) {
         return;
       }
       records[key] = { ...e.result, inputs: i };
+      manual.delete(key);
       persist();
-      fill('loss-' + key, e.result.value);
+      put(fill, key, e.result.value);
       showResult(key, e.notes);
     };
+    // Typing in the loss field takes the value over from the estimate.
+    $('loss-' + key).addEventListener('input', () => {
+      if (filling) return;
+      manual.add(key);
+      persist();
+    });
   }
 }
