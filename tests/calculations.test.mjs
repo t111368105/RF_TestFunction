@@ -17,6 +17,7 @@ import {
   upgradePlan,
   invalidIndex,
   validPlan,
+  partialBudget,
 } from '../site/calculations.mjs';
 
 // Reference values ported from the original Swift project (Tests/main.swift).
@@ -223,4 +224,26 @@ test('Strict parser and saved plan round trip', () => {
   assert.deepEqual(upgradePlan(old).values, base);
   assert.ok(validPlan(upgradePlan(old)));
   assert.equal(upgradePlan(p), p);
+});
+
+test('Partial results need only their own inputs', () => {
+  const full = budget(base);
+  // With every value, they match the full budget.
+  const all = partialBudget(base);
+  close(all.fspl, full.fspl);
+  close(all.received, full.received);
+  close(all.output, full.output);
+  close(all.eirp, 20 - 0 + 2);
+  // Free-space loss needs only the frequency and distance.
+  const onlyPath = partialBudget([2400, 1, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN]);
+  close(onlyPath.fspl, full.fspl);
+  assert.equal(onlyPath.eirp, null);
+  assert.equal(onlyPath.received, null);
+  // No sensitivity or margin: the receiver input is still known.
+  const noSensitivity = partialBudget([2400, 1, 20, 2, 2, 0, 0, 0, NaN, NaN, 0]);
+  close(noSensitivity.output, full.output);
+  // An invalid distance leaves only the EIRP.
+  const badDistance = partialBudget([2400, -1, 20, 2, 2, 0, 0, 0, -90, 0, 0]);
+  assert.equal(badDistance.fspl, null);
+  close(badDistance.eirp, 22);
 });

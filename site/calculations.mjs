@@ -103,6 +103,23 @@ export function budget(v, { ampFirst = false } = {}) {
   };
 }
 
+/**
+ * What the link values entered so far already give, before the budget is complete: free-space loss
+ * from the frequency and distance, EIRP from the transmitter, then the power at the RX antenna output
+ * and the receiver input. Each is null until its inputs are valid.
+ */
+export function partialBudget(v) {
+  const ok = (...indices) =>
+    indices.every((i) => Number.isFinite(v[i]) && !(POSITIVE.includes(i) && v[i] <= 0) && !(NON_NEGATIVE.includes(i) && v[i] < 0));
+  const [f, d, p, tg, r, a, tl, rl, , , o] = v;
+  const fspl = ok(0, 1) ? 20 * Math.log10(d) + 20 * Math.log10(f) + FSPL_CONSTANT : null;
+  const eirp = ok(2, 3, 6) ? p - tl + tg : null;
+  const received = fspl !== null && eirp !== null && ok(4, 10) ? eirp - fspl - o + r : null;
+  const output = received !== null && ok(5, 7) ? received - rl + a : null;
+  const finite = (x) => (Number.isFinite(x) ? x : null);
+  return { fspl: finite(fspl), eirp: finite(eirp), received: finite(received), output: finite(output) };
+}
+
 // Values that are valid but almost certainly a typo or a wrong unit: [index, test, message].
 const PLAUSIBILITY = [
   [0, (x) => x < 0.003 || x > 3e6, 'Frequency is outside the radio range of 3 kHz to 3 THz; check the unit.'],

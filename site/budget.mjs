@@ -11,6 +11,7 @@ import {
   dataLink,
   convertPower,
   inputWarnings,
+  partialBudget,
   DBD_TO_DBI,
 } from './calculations.mjs';
 import { $, esc, fmt, fmtRate, notice, read, write, field, table, bindUnit, newId } from './ui.mjs';
@@ -168,8 +169,24 @@ function showIncomplete(message) {
     $(id).inert = true;
   }
   $('error').textContent = '';
+  // What the inputs entered so far already give, such as the free-space loss from the frequency
+  // and distance alone.
+  const partial = partialBudget(values());
+  const metrics = [
+    [t('Free-space loss'), partial.fspl, 'dB'],
+    [t('EIRP'), partial.eirp, 'dBm'],
+    [t('RX antenna output'), partial.received, 'dBm'],
+    [t('Receiver input'), partial.output, 'dBm'],
+  ]
+    .filter(([, v]) => v !== null)
+    .map(([l, v, u]) => `<div><small>${l}</small><strong>${fmt(v)} ${u}</strong></div>`)
+    .join('');
   $('result').innerHTML =
-    `<p class="eyebrow">${t('LINK PERFORMANCE')}</p><h2>${t('Check the inputs')}</h2>` + `<p>${esc(message)}</p>`;
+    `<p class="eyebrow">${t('LINK PERFORMANCE')}</p>` +
+    (metrics
+      ? `<h2>${t('Partial results')}</h2><div class="metrics">${metrics}</div>` +
+        `<p>${t('To complete the link budget: {problem}', { problem: esc(message) })}</p>`
+      : `<h2>${t('Check the inputs')}</h2><p>${esc(message)}</p>`);
 }
 
 function unitText(i) {
@@ -289,10 +306,19 @@ function setFormValue(id, value) {
 }
 
 function clearForm() {
-  undo = { fields: Object.fromEntries(draftIds.map((id) => [id, $(id).value])), loaded };
+  const v = values();
+  undo = {
+    fields: Object.fromEntries(draftIds.map((id) => [id, $(id).value])),
+    loaded,
+    estimate: currentEstimate(v[0], v[1])?.estimate ?? null,
+    lossCalcs: currentLossCalcs(),
+  };
   for (const i of INPUTS) setFormValue('v' + i, defaults[i]);
   for (const { id } of LOSS_ITEMS) setFormValue(id, '0');
   setFormValue('eirp-limit', '');
+  // Forget the calculators' values too: a cleared 0 is the user's, and must not follow them.
+  restoreEstimate(null);
+  restoreLossCalcs(null);
   loaded = null;
   invalidate();
   $('undo').hidden = false;
@@ -301,6 +327,8 @@ function clearForm() {
 function undoClear() {
   if (!undo) return;
   for (const [id, v] of Object.entries(undo.fields)) setFormValue(id, v);
+  restoreEstimate(undo.estimate);
+  restoreLossCalcs(undo.lossCalcs);
   loaded = undo.loaded;
   unitResets.forEach((reset) => reset());
   undo = null;

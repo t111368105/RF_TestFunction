@@ -805,4 +805,6 @@ export const ZH_TW = {
   "* The last group was padded with zeros.": "* 最後一組位數不足，已補 0。",
   "Enter bits (0 and 1) to see the symbols.": "輸入位元（0 與 1）即可看到對應的符元。",
   "M: number of points; E<sub>s</sub>, E<sub>b</sub>: energy per symbol and per bit; N<sub>0</sub>: noise density; Q: Gaussian tail probability. The BPSK and QPSK error rate is exact; the 8PSK and square QAM ones are the usual approximations with Gray coding. The required Eb/N₀ in the link budget's data rate section comes from curves like these.": "M：點的數量；E<sub>s</sub>、E<sub>b</sub>：每符元與每位元的能量；N<sub>0</sub>：雜訊功率密度；Q：高斯尾端機率。BPSK 與 QPSK 的錯誤率為精確值；8PSK 與方形 QAM 為使用 Gray 編碼時的常用近似式。鏈路預算「資料速率」區所需的 Eb/N₀，就是從這類曲線查出來的。",
+  "Partial results": "部分結果",
+  "To complete the link budget: {problem}": "完成鏈路預算還需要：{problem}",
 };
