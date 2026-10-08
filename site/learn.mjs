@@ -508,6 +508,67 @@ function drawMeasurement(model) {
   );
 }
 
+// ---------------------------------------------------------------- 7. antenna gain: signal versus noise
+
+const ISOTROPIC_SIGNAL = -118.47; // dBm reaching a 0 dBi antenna in the example link
+const SKY_K = 10;
+const GROUND_K = 290;
+
+function drawGain() {
+  const g = value('gain-g');
+  const linear = 10 ** (g / 10);
+  const warm = $('gain-warm').checked;
+  const width = 640;
+  const height = 270;
+  const cx = width / 2;
+  const cy = 200;
+  const r = 170;
+  // Beamwidth of an ideal antenna of this gain (41 253 square degrees in a sphere), and the share of
+  // the pattern that reaches the ground: half for an isotropic antenna, less as the beam narrows.
+  const halfAngle = (Math.min(358, Math.sqrt(41253 / linear)) / 2) * (Math.PI / 180);
+  const at = (phi) => [cx + r * Math.sin(phi), cy - r * Math.cos(phi)];
+  const [x1, y1] = at(-halfAngle);
+  const [x2, y2] = at(halfAngle);
+  const groundShare = 0.5 * 10 ** (-g / 20);
+  const ta = warm ? GROUND_K : SKY_K + (GROUND_K - SKY_K) * groundShare;
+  // The collecting area grows with the gain; drawn as the width of its square root.
+  const aperture = Math.min(width - 40, 8 * Math.sqrt(linear));
+  let arrows = '';
+  for (let x = 30; x <= width - 30; x += 40) {
+    const hit = Math.abs(x - cx) <= aperture / 2;
+    const color = hit ? 'green' : 'muted';
+    const end = hit ? 66 : 60;
+    arrows +=
+      `<g stroke="var(--${color})" stroke-width="${hit ? 2.5 : 1.2}" opacity="${hit ? 1 : 0.45}" fill="none">` +
+      `<line x1="${x}" y1="28" x2="${x}" y2="${end}"/><path d="M${x - 4},${end - 6} L${x},${end + 1} L${x + 4},${end - 6}"/></g>`;
+  }
+  $('gain-chart').innerHTML =
+    `<svg class="compact" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(t('Antenna beam, the satellite signal and the heat radiation around'))}">` +
+    `<rect x="0" y="0" width="${width}" height="${cy}" rx="6" fill="var(--${warm ? 'orange' : 'blue'})" opacity=".13"/>` +
+    `<rect x="0" y="${cy}" width="${width}" height="${height - cy}" rx="6" fill="var(--orange)" opacity=".2"/>` +
+    `<text x="12" y="${cy - 10}">${esc(warm ? t('All around: 290 K (ground, buildings)') : t('Sky: about 10 K, cold and quiet'))}</text>` +
+    `<text x="12" y="${height - 12}">${esc(t('Ground: about 290 K, warm and noisy'))}</text>` +
+    `<text x="${cx}" y="16" text-anchor="middle">${esc(t('The satellite signal arrives from here'))}</text>` +
+    arrows +
+    `<line x1="${cx - aperture / 2}" x2="${cx + aperture / 2}" y1="72" y2="72" stroke="var(--green)" stroke-width="5" stroke-linecap="round"/>` +
+    `<text x="${cx + 14}" y="94">${esc(t('Collecting area'))}</text>` +
+    `<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${halfAngle > Math.PI / 2 ? 1 : 0} 1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" ` +
+    'fill="var(--violet)" fill-opacity=".22" stroke="var(--violet)" stroke-width="1.5"/>' +
+    `<circle cx="${cx}" cy="${cy}" r="6" fill="var(--violet)"/><text x="${cx + 10}" y="${cy + 18}">${esc(t('Antenna'))}</text></svg>`;
+  const signal = ISOTROPIC_SIGNAL + g;
+  const noise = noisePower(ta, 1e6);
+  $('gain-readout').innerHTML = table(
+    [t('Quantity'), t('Value')],
+    [
+      [t('Signal at the antenna output'), `${fmt(signal, 2)} dBm`],
+      [t('Antenna noise temperature Tₐ'), `${fmt(ta, 0)} K`],
+      [t('Antenna noise kTₐB (1 MHz)'), `${fmt(noise, 2)} dBm`],
+      [t('SNR from the antenna noise alone'), `${fmt(signal - noise, 2)} dB`],
+      [t('G/T'), `${fmt(g - 10 * Math.log10(ta), 2)} dB/K`],
+    ],
+  );
+}
+
 // ---------------------------------------------------------------- wiring
 
 const DEMOS = [
@@ -517,6 +578,7 @@ const DEMOS = [
   ['learn-modulation', drawModulation],
   ['learn-constellation', drawConstellation],
   ['learn-noise', drawNoise],
+  ['learn-gain', drawGain],
 ];
 
 export function initLearn() {

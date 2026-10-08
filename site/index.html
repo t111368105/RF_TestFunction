@@ -609,6 +609,7 @@
           <a href="#learn-modulation">4. Analog Modulation: AM and FM</a>
           <a href="#learn-constellation">5. Digital Modulation and Constellations</a>
           <a href="#learn-noise">6. The Noise Floor</a>
+          <a href="#learn-gain">7. Antenna Gain: Signal versus Noise</a>
         </nav>
 
         <article id="learn-wave" class="learn">
@@ -794,6 +795,28 @@
             <!-- eq:learn-tsys --><div class="eq"><math display="block"><mrow><msub><mi>T</mi><mrow><mtext>sys</mtext></mrow></msub><mo>&#x0003D;</mo><msub><mi>T</mi><mi>a</mi></msub><mo>&#x0002B;</mo><msub><mi>T</mi><mi>e</mi></msub><mo>&#x0002C;</mo><mspace width="1em" /><msub><mi>T</mi><mi>e</mi></msub><mo>&#x0003D;</mo><mn>290</mn><mtext>&#x000A0;</mtext><mtext>K</mtext><mo>&#x000B7;</mo><mo stretchy="false">&#x00028;</mo><mi>F</mi><mo>&#x02212;</mo><mn>1</mn><mo stretchy="false">&#x00029;</mo></mrow></math></div><!-- /eq -->
             <!-- eq:learn-analyzer --><div class="eq"><math display="block"><mrow><msub><mi>N</mi><mn>0</mn></msub><mo>&#x0003D;</mo><msub><mi>P</mi><mrow><mtext>RBW</mtext></mrow></msub><mo>&#x02212;</mo><mn>10</mn><msub><mi>log</mi><mrow><mn>10</mn></mrow></msub><mspace width="0.167em" /><mtext>RBW</mtext><mspace width="0.278em" /><mo stretchy="false">&#x00028;</mo><mo>&#x0002B;</mo><mn>2.5</mn><mtext>&#x000A0;</mtext><mtext>dB</mtext><mo stretchy="false">&#x00029;</mo><mo>&#x0002C;</mo><mspace width="1em" /><mi>N</mi><mo>&#x0003D;</mo><msub><mi>N</mi><mn>0</mn></msub><mo>&#x0002B;</mo><mn>10</mn><msub><mi>log</mi><mrow><mn>10</mn></mrow></msub><mspace width="0.167em" /><mi>B</mi></mrow></math></div><!-- /eq -->
             <p class="caption">k = 1.380649 × 10<sup>−23</sup> J/K; −174 dBm/Hz is kT at 290 K. T<sub>e</sub>: noise temperature the receiver adds, from its noise figure F (linear). Log averaging reads noise about 2.5 dB low; a noise marker corrects it. In the Link Budget, the same calculation is under Noise and SNR, with an estimator of the antenna temperature from the sky.</p>
+          </div>
+        </article>
+
+        <article id="learn-gain" class="learn">
+          <h3>7. Antenna Gain: Signal versus Noise</h3>
+          <p>A high-gain antenna makes a weak satellite signal stand out, yet it does not raise the noise by the same amount. The <strong>signal</strong> comes from one direction and arrives like evenly falling rain: a higher-gain antenna is a bigger bucket, with an effective area A<sub>e</sub> proportional to its gain, so it collects more of it. The <strong>noise</strong> is the heat radiation of everything the antenna sees, and depends on how warm that is, not on how much of it: a narrow beam sees a smaller patch but is more sensitive towards it, and the two cancel. The antenna noise is set by the average temperature inside the beam, T<sub>a</sub>.</p>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <label for="gain-g">RX antenna gain <output id="gain-g-out"></output><input type="range" id="gain-g" min="0" max="35" step="1" value="2" data-unit="dBi"></label>
+              <label class="check"><input type="checkbox" id="gain-warm"> Everything around is at 290 K (e.g. a terrestrial link among the ground and buildings)</label>
+              <p class="hint">Try the box first: the signal keeps rising with the gain while the noise does not move. Untick it: an antenna facing the sky sees less warm ground as its beam narrows, so the noise even falls. This is why satellite ground stations use large dishes, and why they are rated by G/T.</p>
+            </div>
+            <div class="learn-plots">
+              <div id="gain-chart" class="chart"></div>
+              <div id="gain-readout"></div>
+            </div>
+          </div>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:learn-aperture --><div class="eq"><math display="block"><mrow><msub><mi>A</mi><mi>e</mi></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>G</mi><msup><mi>&#x003BB;</mi><mn>2</mn></msup></mrow><mrow><mn>4</mn><mi>&#x003C0;</mi></mrow></mfrac><mo>&#x0002C;</mo><mspace width="1em" /><mi>P</mi><mo>&#x0003D;</mo><mi>S</mi><mo>&#x000B7;</mo><msub><mi>A</mi><mi>e</mi></msub></mrow></math></div><!-- /eq -->
+            <!-- eq:learn-antenna-temp --><div class="eq"><math display="block"><mrow><msub><mi>T</mi><mi>a</mi></msub><mo>&#x0003D;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>4</mn><mi>&#x003C0;</mi></mrow></mfrac><mo>&#x0222E;</mo><mi>G</mi><mo stretchy="false">&#x00028;</mo><mi>&#x003B8;</mi><mo>&#x0002C;</mo><mi>&#x003C6;</mi><mo stretchy="false">&#x00029;</mo><mspace width="0.167em" /><mi>T</mi><mo stretchy="false">&#x00028;</mo><mi>&#x003B8;</mi><mo>&#x0002C;</mo><mi>&#x003C6;</mi><mo stretchy="false">&#x00029;</mo><mspace width="0.167em" /><mi>d</mi><mi>&#x003A9;</mi><mo>&#x0002C;</mo><mspace width="1em" /><mfrac><mrow><mn>1</mn></mrow><mrow><mn>4</mn><mi>&#x003C0;</mi></mrow></mfrac><mo>&#x0222E;</mo><mi>G</mi><mspace width="0.167em" /><mi>d</mi><mi>&#x003A9;</mi><mo>&#x0003D;</mo><mn>1</mn><mo>&#x0002C;</mo><mspace width="1em" /><mi>N</mi><mo>&#x0003D;</mo><mi>k</mi><msub><mi>T</mi><mi>a</mi></msub><mi>B</mi></mrow></math></div><!-- /eq -->
+            <p class="caption">S: power flux density of the signal (W/m²); G(θ, φ): antenna gain towards each direction; T(θ, φ): temperature of what lies in that direction. The gain averages to 1 over all directions, so a uniform 290 K scene gives T<sub>a</sub> = 290 K whatever the gain. The chart uses the signal of a 0 dBi antenna of −118.47 dBm, a 1 MHz bandwidth, a 10 K sky and 290 K ground, with a simplified share of the beam on the ground.</p>
           </div>
         </article>
       </section>
