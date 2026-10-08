@@ -583,6 +583,11 @@ button:disabled {
 
 /* ---------- Analysis: chart and tables ---------- */
 
+/* Results from the last valid inputs while the current ones are incomplete. */
+.stale {
+  opacity: .45;
+}
+
 #analysis > .heading {
   margin-top: 42px;
 }

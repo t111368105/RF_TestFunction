@@ -630,17 +630,19 @@ const sameInputs = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 /**
  * Recalculates the values still in their loss fields with the current link and conditions, after any
- * of them changes. Values edited by hand are left alone, and so are calculations whose new inputs
- * are invalid, such as while a number is being typed, and those for the other path type: they stay
- * marked as outdated.
+ * of them changes, the path type included. Values edited by hand are left alone, and so are
+ * calculations whose new inputs are invalid, such as while a number is being typed, or an item that
+ * does not apply to the new path type: they stay marked as outdated, and the latter says why.
  */
 export function refreshEstimates(link, fill) {
   const i = inputs(link);
   for (const [key, r] of Object.entries(records)) {
-    if (!r?.inputs || $('loss-' + key).value.trim() !== r.value) continue;
-    if (r.inputs.path !== i.path || sameInputs(r.inputs, i)) continue;
+    if (!r?.inputs || $('loss-' + key).value.trim() !== r.value || sameInputs(r.inputs, i)) continue;
     const e = estimateItem(key, i);
-    if (e.error) continue;
+    if (e.error) {
+      if (r.inputs.path !== i.path) $(`calc-${key}-result`).innerHTML = `<p class="error">${e.error}</p>`;
+      continue;
+    }
     records[key] = { ...e.result, inputs: i };
     fill('loss-' + key, e.result.value);
     showResult(key, e.notes);

@@ -159,24 +159,19 @@ function run(kind, result, fill) {
 }
 
 /**
- * Recalculates a pointing loss still in its field when the frequency changes, for the antennas whose
- * beamwidth came from a dish diameter. A hand-edited value or an invalid frequency leaves it alone.
+ * Recalculates a loss still in its field from the calculator's fields and the frequency fMHz, after
+ * either changes. A hand-edited value, or fields that are invalid for now, leave it alone.
  */
+function follow(kind, fMHz, fill) {
+  const r = records[kind];
+  if (!r || $(LOSS_FIELDS[kind]).value.trim() !== r.value) return;
+  const result = kind === 'polarization' ? calculatePolarization() : calculatePointing(fMHz);
+  if (!result.error) run(kind, result, fill);
+}
+
+/** Recalculates the pointing loss for a new frequency, which sets a dish's beamwidth. */
 export function refreshLossCalcs(fMHz, fill) {
-  const r = records.pointing;
-  if (!r?.inputs || $(LOSS_FIELDS.pointing).value.trim() !== r.value) return;
-  if (!r.inputs.sides.some((s) => s.diameter !== undefined)) return;
-  let total = 0;
-  const sides = [];
-  for (const s of r.inputs.sides) {
-    const beamwidth = s.diameter === undefined ? s.beamwidth : dishBeamwidth(fMHz, s.diameter);
-    const loss = pointingLoss(s.error, beamwidth);
-    if (beamwidth === null || loss === null) return;
-    total += loss;
-    sides.push({ ...s, beamwidth, loss });
-  }
-  const rough = sides.some((s) => s.error > 0.5 * s.beamwidth);
-  run('pointing', { loss: total, inputs: { sides }, note: rough ? ROUGH : '' }, fill);
+  follow('pointing', fMHz, fill);
 }
 
 /** The calculator records whose values are still in their loss fields, by kind, for a snapshot. */
@@ -226,7 +221,12 @@ export function initLossCalculators({ link, fill }) {
   updateVisibility();
 
   for (const id of ids) {
-    $(id).addEventListener('input', persist);
+    const kind = id.startsWith('pol-') ? 'polarization' : 'pointing';
+    $(id).addEventListener('input', () => {
+      updateVisibility();
+      persist();
+      follow(kind, link().fMHz, fill);
+    });
     $(id).addEventListener('change', () => {
       updateVisibility();
       persist();

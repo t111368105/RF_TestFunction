@@ -58,7 +58,7 @@ initPlans({
     loadPlan(plan);
     showTab('budget');
     if (analyze) analyzePlan(plan);
-    else notice(t('Parameters loaded. Press Calculate to update the results.'));
+    else notice(t('Parameters loaded and calculated.'));
   },
 });
 initPrefs();

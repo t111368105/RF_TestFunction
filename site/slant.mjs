@@ -39,17 +39,25 @@ export function initSlant({ fill }) {
   }
   record = saved.record ?? null;
 
-  // A new elevation under the shared conditions moves the satellite along the same orbit.
-  $('atmo-elevation').addEventListener('input', () => {
-    const elevation = number($('atmo-elevation').value);
+  // While the distance holds the calculated range, it follows the satellite altitude, the elevation
+  // (here or under the shared conditions, kept equal) and the station altitude.
+  const follow = (source) => {
     if (!currentOrbit(number($('v1').value) * number($('distance-unit').value))) return;
-    const km = slantRange(record.altitude, elevation, record.stationKm);
+    const elevation = number($(source).value);
+    const altitude = number($('orbit-altitude').value);
+    const stationKm = stationAltitude();
+    const km = slantRange(altitude, elevation, stationKm);
     if (km === null) return;
-    record = { ...record, km, elevation };
-    $('slant-elevation').value = String(elevation);
+    if (source === 'atmo-elevation') $('slant-elevation').value = $('atmo-elevation').value;
+    else if (elevation !== number($('atmo-elevation').value)) setSlantElevation(elevation);
+    record = { km, altitude, elevation, stationKm };
     persist();
     fill('v1', String(Number((km / number($('distance-unit').value)).toPrecision(7))));
-  });
+  };
+  $('atmo-elevation').addEventListener('input', () => follow('atmo-elevation'));
+  for (const id of ['orbit-altitude', 'slant-elevation', 'atmo-altitude-m']) {
+    $(id).addEventListener('input', () => follow('slant-elevation'));
+  }
 
   $('slant-calc-run').onclick = () => {
     const out = $('slant-calc-result');

@@ -99,6 +99,12 @@ const ANALYSIS_DEFAULTS = {
 };
 
 let snapshot = null; // The last calculated link, plus its analysis fields.
+// Analysis fields kept from the last calculation while the inputs are incomplete, for the next one.
+let carried = null;
+let pending = 0; // Timer for the next live calculation.
+// Fields the sky noise estimator filled: the attenuation taken from the path and the antenna
+// temperature. Each follows its source while it still holds that value.
+const sky = { atten: null, temp: null };
 let loaded = null; // The saved plan whose parameters are in the form, if any.
 let undo = null; // Form state before the last Clear.
 const unitResets = []; // Re-sync unit converters after values are set programmatically.
@@ -139,16 +145,31 @@ function updateLossTotal() {
     : t('Total additional path loss: check the values above');
 }
 
+// The analysis fields and measurements a new calculation keeps from the previous one.
+const CARRIED = [...META.map(([, key]) => key), 'nfFromParts', 'measurements', 'measureUnit'];
+
+/** Recalculates shortly after the inputs change, so a burst of changes calculates once. */
 function invalidate() {
-  snapshot = null;
-  $('analysis').hidden = true;
-  $('breakdown').hidden = true;
-  $('error').textContent = '';
-  $('result').innerHTML =
-    `<p class="eyebrow">${t('LINK PERFORMANCE')}</p><h2>${t('Awaiting calculation')}</h2>` +
-    `<p>${t('Parameters have changed. Press "Calculate Link Budget".')}</p>`;
   updateLossTotal();
   persist();
+  clearTimeout(pending);
+  pending = setTimeout(() => compute({ live: true }), 120);
+}
+
+/** Shows that the inputs are incomplete, keeping the last results dimmed until they are valid again. */
+function showIncomplete(message) {
+  if (snapshot) {
+    syncMeta();
+    carried = Object.fromEntries(CARRIED.map((key) => [key, structuredClone(snapshot[key])]));
+  }
+  snapshot = null;
+  for (const id of ['analysis', 'breakdown']) {
+    $(id).classList.add('stale');
+    $(id).inert = true;
+  }
+  $('error').textContent = '';
+  $('result').innerHTML =
+    `<p class="eyebrow">${t('LINK PERFORMANCE')}</p><h2>${t('Check the inputs')}</h2>` + `<p>${esc(message)}</p>`;
 }
 
 function unitText(i) {
@@ -190,52 +211,77 @@ function showProblem({ el, message }) {
   el.focus();
 }
 
-function calculate(e) {
-  e.preventDefault();
-  const eirpLimit = $('eirp-limit').value.trim();
+/** The first invalid input as { el, message }, or null. */
+function inputProblem() {
   // Checked one by one: a negative item could otherwise hide inside a positive total.
-  if (lossValues().some((x) => !Number.isFinite(x) || x < 0)) {
-    showProblem(fieldProblem(10));
+  if (lossValues().some((x) => !Number.isFinite(x) || x < 0)) return fieldProblem(10);
+  const v = values();
+  try {
+    budget(v);
+  } catch (err) {
+    const i = invalidIndex(v);
+    return i >= 0 ? fieldProblem(i) : { el: $('v0'), message: err.message };
+  }
+  const eirpLimit = $('eirp-limit').value.trim();
+  if (eirpLimit && !Number.isFinite(number(eirpLimit))) {
+    return { el: $('eirp-limit'), message: t('EIRP limit (dBm) must be a number, or leave it blank.') };
+  }
+  return null;
+}
+
+/**
+ * Calculates the link from the form. Live calculations, after each change, only describe a problem;
+ * the Calculate button also focuses the field and plays the feedback.
+ */
+function compute({ live }) {
+  clearTimeout(pending);
+  const problem = inputProblem();
+  if (problem) {
+    showIncomplete(problem.message);
+    if (!live) showProblem(problem);
     return;
   }
-  try {
-    const v = values();
-    budget(v);
-    if (eirpLimit && !Number.isFinite(number(eirpLimit))) {
-      showProblem({ el: $('eirp-limit'), message: t('EIRP limit (dBm) must be a number, or leave it blank.') });
-      return;
-    }
-    const estimate = currentEstimate(v[0], v[1]);
-    // Cloned so editing this calculation never changes the loaded plan.
-    snapshot = structuredClone({
-      ...ANALYSIS_DEFAULTS,
-      ...(loaded ?? {}),
-      id: newId(),
-      date: new Date().toISOString(),
-      values: v,
-      name: loaded?.name ?? '',
-      notes: loaded?.notes ?? '',
-      lossItems: Object.fromEntries(LOSS_ITEMS.map(({ key, id }) => [key, $(id).value.trim()])),
-      ampPosition: $('amp-position').value,
-      eirpLimit,
-      atmosphereEstimate: estimate?.estimate ?? null,
-      lossCalcs: currentLossCalcs(),
-      atmosphereStale: !!estimate?.stale,
-      orbit: currentOrbit(v[1]),
-    });
-    $('error').textContent = '';
-    showSnapshot();
-    if ($('animation').checked && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      $('result').classList.remove('pulse');
-      void $('result').offsetWidth; // Restart the CSS animation.
-      $('result').classList.add('pulse');
-    }
-    if ($('haptics').checked && navigator.vibrate) navigator.vibrate(30);
-  } catch (err) {
-    const i = invalidIndex(values());
-    if (i >= 0) showProblem(fieldProblem(i));
-    else $('error').textContent = err.message;
+  const v = values();
+  const estimate = currentEstimate(v[0], v[1]);
+  if (snapshot) syncMeta();
+  const kept = snapshot ? Object.fromEntries(CARRIED.map((key) => [key, snapshot[key]])) : carried;
+  // Cloned so editing this calculation never changes the loaded plan.
+  snapshot = structuredClone({
+    ...ANALYSIS_DEFAULTS,
+    ...(loaded ?? {}),
+    name: loaded?.name ?? '',
+    notes: loaded?.notes ?? '',
+    ...(kept ?? {}),
+    id: newId(),
+    date: new Date().toISOString(),
+    values: v,
+    lossItems: Object.fromEntries(LOSS_ITEMS.map(({ key, id }) => [key, $(id).value.trim()])),
+    ampPosition: $('amp-position').value,
+    eirpLimit: $('eirp-limit').value.trim(),
+    atmosphereEstimate: estimate?.estimate ?? null,
+    lossCalcs: currentLossCalcs(),
+    atmosphereStale: !!estimate?.stale,
+    orbit: currentOrbit(v[1]),
+  });
+  carried = null;
+  for (const id of ['analysis', 'breakdown']) {
+    $(id).classList.remove('stale');
+    $(id).inert = false;
   }
+  $('error').textContent = '';
+  showSnapshot();
+  if (live) return;
+  if ($('animation').checked && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    $('result').classList.remove('pulse');
+    void $('result').offsetWidth; // Restart the CSS animation.
+    $('result').classList.add('pulse');
+  }
+  if ($('haptics').checked && navigator.vibrate) navigator.vibrate(30);
+}
+
+function calculate(e) {
+  e.preventDefault();
+  compute({ live: false });
 }
 
 function setFormValue(id, value) {
@@ -330,8 +376,19 @@ function showSnapshot() {
   drawChart(true);
   showPass(snapshot);
   showAvailability(snapshot);
-  if ($('sky-atten').value.trim() === '') $('sky-atten').value = pathAbsorption();
+  followSky();
   updateAnalysis();
+}
+
+/**
+ * Keeps the sky noise estimator in step: a blank or path-derived attenuation follows the path
+ * losses, and an antenna temperature it filled follows the estimator's fields.
+ */
+function followSky() {
+  if (snapshot && ($('sky-atten').value.trim() === '' || $('sky-atten').value === sky.atten)) {
+    $('sky-atten').value = sky.atten = pathAbsorption();
+  }
+  if (sky.temp !== null && $('antenna-temp').value === sky.temp) skyCalculate(true);
 }
 
 /** The atmospheric and cloud losses of the shown calculation (dB), as text. */
@@ -500,7 +557,11 @@ export function loadPlan(p) {
   setFormValue('eirp-limit', p.eirpLimit ?? '');
   restoreEstimate(p.atmosphereEstimate);
   restoreLossCalcs(p.lossCalcs);
-  invalidate();
+  snapshot = null;
+  carried = null;
+  updateLossTotal();
+  persist();
+  compute({ live: true });
 }
 
 /** Shows a saved plan's results and analysis without recalculating. */
@@ -512,6 +573,10 @@ export function analyzePlan(p) {
 /** Shows a calculation (a saved plan or a carried-over snapshot) without recalculating. */
 export function showCalculation(p) {
   snapshot = structuredClone(p);
+  for (const id of ['analysis', 'breakdown']) {
+    $(id).classList.remove('stale');
+    $(id).inert = false;
+  }
   showSnapshot();
 }
 
@@ -635,31 +700,46 @@ function buildSkyCalculator() {
       field('sky-ground', t('Ground pickup T_g'), '0', 'K', ''),
   );
   $('sky-calc-path').onclick = () => {
-    if (snapshot) $('sky-atten').value = pathAbsorption();
+    if (!snapshot) return;
+    $('sky-atten').value = sky.atten = pathAbsorption();
+    followSky();
   };
-  $('sky-calc-run').onclick = () => {
-    const out = $('sky-calc-result');
-    const a = number($('sky-atten').value);
-    const tmr = number($('sky-tmr').value);
-    const ground = number($('sky-ground').value);
-    if (!(a >= 0 && tmr > 0 && ground >= 0)) {
+  $('sky-calc-run').onclick = () => skyCalculate(false);
+  for (const id of ['sky-atten', 'sky-tmr', 'sky-ground']) {
+    $(id).addEventListener('input', () => {
+      if (sky.temp !== null && $('antenna-temp').value === sky.temp) skyCalculate(true);
+    });
+  }
+}
+
+/** Fills the antenna temperature from the sky noise fields; quiet skips invalid fields silently. */
+function skyCalculate(quiet) {
+  const out = $('sky-calc-result');
+  const a = number($('sky-atten').value);
+  const tmr = number($('sky-tmr').value);
+  const ground = number($('sky-ground').value);
+  if (!(a >= 0 && tmr > 0 && ground >= 0)) {
+    if (!quiet) {
       out.innerHTML = `<p class="error">${t('Enter an attenuation of 0 dB or more, a positive T_mr and a ground pickup of 0 K or more.')}</p>`;
-      return;
     }
-    const sky = skyTemperature(a, tmr);
-    const total = String(Number((sky + ground).toFixed(1)));
+    return;
+  }
+  const skyK = skyTemperature(a, tmr);
+  const total = String(Number((skyK + ground).toFixed(1)));
+  sky.temp = total;
+  if ($('antenna-temp').value !== total) {
     $('antenna-temp').value = total;
     $('antenna-temp').dispatchEvent(new Event('input'));
-    const ts = surfaceTemperature();
-    out.innerHTML =
-      `<p>${t('Sky {sky} K + ground {ground} K = {total} K, filled in above.', { sky: fmt(sky, 1), ground: fmt(ground, 1), total })}</p>` +
-      (ts === null
-        ? ''
-        : `<p class="hint">${t('In clear or cloudy weather at {temperature} °C, T_mr ≈ {tmr} K.', {
-            temperature: fmt(ts),
-            tmr: fmt(37.34 + 0.81 * (ts + 273.15), 1),
-          })}</p>`);
-  };
+  }
+  const ts = surfaceTemperature();
+  out.innerHTML =
+    `<p>${t('Sky {sky} K + ground {ground} K = {total} K, filled in above.', { sky: fmt(skyK, 1), ground: fmt(ground, 1), total })}</p>` +
+    (ts === null
+      ? ''
+      : `<p class="hint">${t('In clear or cloudy weather at {temperature} °C, T_mr ≈ {tmr} K.', {
+          temperature: fmt(ts),
+          tmr: fmt(37.34 + 0.81 * (ts + 273.15), 1),
+        })}</p>`);
 }
 
 const powerUnits = (value, from, to) => (from === to ? value : convertPower(value, to === 'W'));
@@ -722,4 +802,5 @@ export function initBudget({ addPlan }) {
   $('distance-slider').oninput = inspectDistance;
   $('save').onclick = () => save(addPlan);
   $('pdf').onclick = print;
+  compute({ live: true });
 }
