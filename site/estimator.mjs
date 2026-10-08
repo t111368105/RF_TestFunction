@@ -608,9 +608,9 @@ function showPathFields() {
 export function currentEstimate(fMHz, distanceKm) {
   const items = Object.fromEntries(Object.entries(records).filter(([key, r]) => $('loss-' + key).value.trim() === r.value));
   if (!Object.keys(items).length) return null;
-  const stale = Object.values(items).some(
-    ({ inputs: i }) => i.fMHz !== fMHz || (i.path === 'terrestrial' && i.distanceKm !== distanceKm),
-  );
+  // Outdated when calculated with other inputs than the link and conditions now in the form.
+  const now = inputs({ fMHz, distanceKm });
+  const stale = Object.values(items).some((r) => !sameInputs(r.inputs, now));
   return { estimate: { items }, stale };
 }
 
@@ -626,20 +626,19 @@ function showResult(key, notes) {
     notes.map((n) => `<p class="hint">${n}</p>`).join('');
 }
 
+const sameInputs = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
 /**
- * Recalculates the values still in their loss fields for a new link frequency or distance, and on
- * Earth–space paths a new elevation, with the other conditions they were calculated with. Values
- * edited by hand are left alone, and so are the calculations while the link is invalid (they stay
- * marked as outdated).
+ * Recalculates the values still in their loss fields with the current link and conditions, after any
+ * of them changes. Values edited by hand are left alone, and so are calculations whose new inputs
+ * are invalid, such as while a number is being typed, and those for the other path type: they stay
+ * marked as outdated.
  */
-export function refreshEstimates({ fMHz, distanceKm, elevation }, fill) {
+export function refreshEstimates(link, fill) {
+  const i = inputs(link);
   for (const [key, r] of Object.entries(records)) {
     if (!r?.inputs || $('loss-' + key).value.trim() !== r.value) continue;
-    // A value calculated for the other path type no longer applies; it stays marked as outdated.
-    if (r.inputs.path !== $('atmo-path').value) continue;
-    const el = r.inputs.path === 'slant' && elevation !== undefined ? elevation : r.inputs.elevation;
-    if (r.inputs.fMHz === fMHz && r.inputs.distanceKm === distanceKm && r.inputs.elevation === el) continue;
-    const i = { ...r.inputs, fMHz, distanceKm, elevation: el };
+    if (r.inputs.path !== i.path || sameInputs(r.inputs, i)) continue;
     const e = estimateItem(key, i);
     if (e.error) continue;
     records[key] = { ...e.result, inputs: i };
@@ -754,6 +753,7 @@ export function initEstimator({ link, fill }) {
       if (id === 'atmo-percent') followPercent();
       highlightSiteValues();
       persist();
+      refreshEstimates(link(), fill);
     });
   }
   // The preset shows which typical value S4 holds, and Custom once it is edited to another value.
@@ -775,6 +775,7 @@ export function initEstimator({ link, fill }) {
     for (const [id, valueAt] of Object.entries(PERCENT_DEPENDENT)) $(id).value = valueAt(percentShown);
     highlightSiteValues();
     persist();
+    refreshEstimates(link(), fill);
   };
   $('atmo-path').addEventListener('change', () => {
     showPathFields();

@@ -695,13 +695,14 @@ export function initBudget({ addPlan }) {
   initEstimator({ link, fill });
   initSlant({ fill });
   attachHelp();
-  // Calculated losses follow the link frequency and distance, and the elevation of an Earth–space path.
+  // Calculated losses follow the link frequency and distance; estimator.mjs refreshes them for its
+  // own conditions.
   const refresh = () => {
     const l = link();
-    refreshEstimates({ ...l, elevation: number($('atmo-elevation').value) }, fill);
+    refreshEstimates(l, fill);
     refreshLossCalcs(l.fMHz, fill);
   };
-  for (const id of ['v0', 'v1', 'frequency-unit', 'distance-unit', 'atmo-elevation']) $(id).addEventListener('input', refresh);
+  for (const id of ['v0', 'v1', 'frequency-unit', 'distance-unit']) $(id).addEventListener('input', refresh);
   for (const id of ['frequency-unit', 'distance-unit']) $(id).addEventListener('change', refresh);
 
   $('budget-form').onsubmit = calculate;

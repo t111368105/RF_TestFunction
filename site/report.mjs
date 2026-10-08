@@ -10,7 +10,7 @@ import { lossItemsOf, lossItemsSummary } from './path-losses.mjs';
 import { t, locale } from './i18n.mjs';
 
 export const STALE_ESTIMATE = t(
-  'The atmosphere, ionosphere and radome estimate was made for a different frequency or distance; estimate it again.',
+  'Some estimated path losses were calculated with other conditions than those now in the form, for example for the other path type; estimate them again.',
 );
 
 /** budget() options for a snapshot or plan. */

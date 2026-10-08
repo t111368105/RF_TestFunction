@@ -480,7 +480,7 @@ export const ZH_TW = {
   "S4 above 0.6 is strong scintillation, where the f^−1.5 scaling and the fade estimate are less reliable.": "S4 大於 0.6 屬於強閃爍，此時 f^−1.5 的換算與衰落估算較不可靠。",
   "S4 below 0.1 is weak scintillation; m = 1/S4² is used, as the P.531 m formula applies from 0.1.": "S4 小於 0.1 屬於弱閃爍；由於 P.531 的 m 公式適用於 0.1 以上，此處改用 m = 1/S4²。",
   "Enter a vertical absorption at 30 MHz of 0 dB or more.": "請輸入 0 dB 以上的 30 MHz 垂直吸收量。",
-  "The atmosphere, ionosphere and radome estimate was made for a different frequency or distance; estimate it again.": "大氣、電離層與天線罩的估算是以不同的頻率或距離算出的，請重新估算。",
+  "Some estimated path losses were calculated with other conditions than those now in the form, for example for the other path type; estimate them again.": "部分估算的路徑損耗是以不同於目前表單的條件計算的（例如另一種路徑類型）；請重新估算。",
   "Clouds (ITU-R P.840)": "雲霧（ITU-R P.840）",
   "Tropospheric scintillation (ITU-R P.618-13)": "對流層閃爍（ITU-R P.618-13）",
   "Ionospheric scintillation (ITU-R P.531)": "電離層閃爍（ITU-R P.531）",
