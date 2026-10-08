@@ -41,7 +41,7 @@ const names = [
 ].map((name) => t(name));
 const units = ['MHz', 'km', 'dBm', 'dBi', 'dBi', 'dB', 'dB', 'dB', 'dBm', 'dB'];
 const defaults = ['', '', '', '', '', '0', '0', '0', '', '0'];
-const placeholders = ['2.4', '1', '20', '2', '2', '0', '0', '0', '-90', '10'];
+const placeholders = ['2.4', '590', '33', '8', '2', '0', '0', '0', '-90', '10'];
 // Inputs that may be negative get a ± button for keypads without a minus key.
 const SIGNED = [2, 3, 4, 5, 8];
 // Form sections in signal-flow order, matching the power breakdown. Value 10 (additional path
