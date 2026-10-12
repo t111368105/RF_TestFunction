@@ -28,6 +28,7 @@ FORMULAS = {
     "doppler-shift": r"\Delta f \approx {-f_0} \frac{v_r}{c}",
     "doppler-received": r"f_r = f_0 + \Delta f",
     # Noise and data rate
+    "noise-ktb": r"N = k\, T_{\text{sys}}\, B \quad \text{W}",
     "noise-floor": r"N = {-173.975} + 10 \log_{10} \frac{T_{\text{sys}}}{290\,\text{K}} + 10 \log_{10} B \quad \text{dBm}",
     "noise-tsys": r"T_{\text{sys}} = T_a + 290\,\text{K} \cdot (F - 1), \quad F = 10^{\text{NF}/10}",
     "noise-snr": r"\text{SNR} = C - N",
