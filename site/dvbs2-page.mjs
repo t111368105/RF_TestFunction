@@ -132,7 +132,7 @@ function drawSummary(s) {
   $('s2-summary').innerHTML = table(
     [t('Quantity'), t('Value')],
     [
-      [t('Useful bits per frame (K_bch − 80)'), fmt(info.kbch - BBHEADER_BITS, 0)],
+      [t('Useful bits per frame (K<sub>bch</sub> − 80)'), fmt(info.kbch - BBHEADER_BITS, 0)],
       [t('PLFRAME length'), `${fmt(info.plSymbols, 0)} ${t('symbols')}`],
       [t('Spectral efficiency η'), `${fmt(info.efficiency, 4)} bit/symbol`],
       [t('Useful bit rate'), Number.isFinite(s.rs) && s.rs > 0 ? rate(info.efficiency * s.rs) : t('Enter a symbol rate')],
@@ -232,11 +232,11 @@ function drawTx(s) {
   $('s2-fec-table').innerHTML = table(
     [t('Quantity'), t('Value')],
     [
-      [t('BCH: K_bch → N_bch'), `${fmt(info.kbch, 0)} → ${fmt(info.nbch, 0)}`],
+      [t('BCH: K<sub>bch</sub> → N<sub>bch</sub>'), `${fmt(info.kbch, 0)} → ${fmt(info.nbch, 0)}`],
       [t('BCH: corrects up to t errors'), String(info.t)],
-      [t('LDPC: k_ldpc → n_ldpc'), `${fmt(info.nbch, 0)} → ${fmt(info.nldpc, 0)} (${modcod.rate})`],
+      [t('LDPC: k<sub>ldpc</sub> → n<sub>ldpc</sub>'), `${fmt(info.nbch, 0)} → ${fmt(info.nldpc, 0)} (${modcod.rate})`],
       [t('LDPC accumulator step q'), String(info.q)],
-      [t('Overall code rate K_bch / n_ldpc'), fmt(info.codeRate, 4)],
+      [t('Overall code rate K<sub>bch</sub> / n<sub>ldpc</sub>'), fmt(info.codeRate, 4)],
     ],
   );
 

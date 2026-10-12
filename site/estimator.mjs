@@ -96,7 +96,7 @@ const ITEMS = {
   'tropo-scintillation': {
     slantOnly: true,
     fields: [
-      ['atmo-nwet', 'Wet refractivity N_wet', TAIPEI['atmo-nwet'], '', ''],
+      ['atmo-nwet', 'Wet refractivity N<sub>wet</sub>', TAIPEI['atmo-nwet'], '', ''],
       ['atmo-dish', 'Antenna diameter', '', 'm', `placeholder="${t('blank: no aperture averaging')}"`],
       ['atmo-efficiency', 'Antenna efficiency', '0.5', '', ''],
     ],
@@ -120,7 +120,7 @@ const ITEMS = {
     fields: [
       ['veg-depth', 'Vegetation depth', '', 'm', `placeholder="${t('blank: no vegetation')}"`],
       ['veg-gamma', 'Specific attenuation γ', '', 'dB/m', `placeholder="${t('blank: P.833 Table 1')}"`, 'terrestrial'],
-      ['veg-max', 'Maximum attenuation A_m', '', 'dB', `placeholder="${t('blank: P.833 Table 1')}"`, 'terrestrial'],
+      ['veg-max', 'Maximum attenuation A<sub>m</sub>', '', 'dB', `placeholder="${t('blank: P.833 Table 1')}"`, 'terrestrial'],
     ],
   },
   building: {
@@ -228,7 +228,7 @@ function describeItem(key, r) {
   }
   if (key === 'tropo-scintillation') {
     return t(
-      'ITU-R P.618: N_wet {nwet}, {antenna}, exceeded {percent} % of the time, {frequency} GHz, elevation {elevation}° → {value} dB.',
+      'ITU-R P.618: N<sub>wet</sub> {nwet}, {antenna}, exceeded {percent} % of the time, {frequency} GHz, elevation {elevation}° → {value} dB.',
       {
         nwet: fmt(i.nWet, 1),
         antenna: i.dish
@@ -420,7 +420,7 @@ const TERRAIN = {
     }
     if ((i.vegetationGamma === null || i.vegetationMax === null) && (fMHz < WOODLAND_RANGE[0] || fMHz > WOODLAND_RANGE[1])) {
       notes.push(
-        t('P.833 Table 1 covers 106 to 2118 MHz; the values at its nearest end are used. Enter γ and A_m for this frequency if you have them.'),
+        t('P.833 Table 1 covers 106 to 2118 MHz; the values at its nearest end are used. Enter γ and A<sub>m</sub> for this frequency if you have them.'),
       );
     }
     return { result: { value: rounded(woodlandLoss(i.vegetationDepth, gamma, am)), gamma, am }, notes };
@@ -519,7 +519,7 @@ const DESCRIBE_TERRAIN = {
         value: r.value,
       });
     }
-    return t('ITU-R P.833 (terminal in woodland): {depth} m, γ {gamma} dB/m, A_m {am} dB, {frequency} GHz → {value} dB.', {
+    return t('ITU-R P.833 (terminal in woodland): {depth} m, γ {gamma} dB/m, A<sub>m</sub> {am} dB, {frequency} GHz → {value} dB.', {
       depth: fmt(i.vegetationDepth, 4),
       gamma: fmt(r.gamma, 3),
       am: fmt(r.am, 3),

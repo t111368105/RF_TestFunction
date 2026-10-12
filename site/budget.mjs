@@ -893,8 +893,8 @@ function buildSkyCalculator() {
   $('sky-calc-fields').insertAdjacentHTML(
     'beforeend',
     field('sky-atten', t('Atmospheric attenuation A'), '', 'dB', `placeholder="${t('e.g. {value}', { value: 2 })}"`) +
-      field('sky-tmr', t('Mean radiating temperature T_mr'), '275', 'K', '') +
-      field('sky-ground', t('Ground pickup T_g'), '0', 'K', ''),
+      field('sky-tmr', t('Mean radiating temperature T<sub>mr</sub>'), '275', 'K', '') +
+      field('sky-ground', t('Ground pickup T<sub>g</sub>'), '0', 'K', ''),
   );
   $('sky-calc-path').onclick = () => {
     if (!snapshot) return;
@@ -943,7 +943,7 @@ function skyCalculate(quiet) {
   const ground = number($('sky-ground').value);
   if (!(a >= 0 && tmr > 0 && ground >= 0)) {
     if (!quiet) {
-      out.innerHTML = `<p class="error">${t('Enter an attenuation of 0 dB or more, a positive T_mr and a ground pickup of 0 K or more.')}</p>`;
+      out.innerHTML = `<p class="error">${t('Enter an attenuation of 0 dB or more, a positive T<sub>mr</sub> and a ground pickup of 0 K or more.')}</p>`;
     }
     return;
   }
@@ -959,7 +959,7 @@ function skyCalculate(quiet) {
     `<p>${t('Sky {sky} K + ground {ground} K = {total} K, filled in above.', { sky: fmt(skyK, 1), ground: fmt(ground, 1), total })}</p>` +
     (ts === null
       ? ''
-      : `<p class="hint">${t('In clear or cloudy weather at {temperature} °C, T_mr ≈ {tmr} K.', {
+      : `<p class="hint">${t('In clear or cloudy weather at {temperature} °C, T<sub>mr</sub> ≈ {tmr} K.', {
           temperature: fmt(ts),
           tmr: fmt(37.34 + 0.81 * (ts + 273.15), 1),
         })}</p>`);

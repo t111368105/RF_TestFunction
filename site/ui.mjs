@@ -92,8 +92,10 @@ export function initSignButtons() {
 }
 
 export function table(head, rows) {
-  const th = head.map((x) => `<th>${esc(x)}</th>`).join('');
-  const tr = rows.map((row) => `<tr>${row.map((x) => `<td>${esc(x)}</td>`).join('')}</tr>`).join('');
+  // Cells are escaped, except <sub> and <sup> so symbols such as T<sub>sys</sub> keep their subscripts.
+  const cell = (x) => esc(x).replace(/&lt;(\/?)(sub|sup)&gt;/g, '<$1$2>');
+  const th = head.map((x) => `<th>${cell(x)}</th>`).join('');
+  const tr = rows.map((row) => `<tr>${row.map((x) => `<td>${cell(x)}</td>`).join('')}</tr>`).join('');
   return `<div class="table-wrap"><table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table></div>`;
 }
 
