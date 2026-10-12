@@ -103,6 +103,8 @@ FORMULAS = {
     # Satellite geometry and sky noise
     "slant-range": r"d = \sqrt{(R_e + H)^2 - (R_e + h_s)^2 \cos^2 \theta} - (R_e + h_s) \sin \theta",
     "sky-temperature": r"T_a = T_{mr}\left(1 - 10^{-A/10}\right) + 2.7 \cdot 10^{-A/10} + T_g",
+    "sky-ground": r"T_g = \frac{T_s}{4\pi} \int_{\text{ground}} G(\varphi)\, d\Omega",
+    "sky-ground-pattern": r"G(\varphi) = 32 - 25 \log_{10} \varphi \ \text{dBi} \;\; (1^\circ \le \varphi < 48^\circ), \quad G(\varphi) = -10\ \text{dBi} \;\; (48^\circ \le \varphi \le 180^\circ)",
     # Learn page
     "learn-wave": r"s(t) = A \sin(2\pi f t + \varphi), \quad T = \frac{1}{f}",
     "learn-wavelength": r"\lambda = \frac{c}{f}",

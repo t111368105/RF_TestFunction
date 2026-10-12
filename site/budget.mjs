@@ -40,6 +40,7 @@ import {
   restoreEstimate,
   refreshEstimates,
   surfaceTemperature,
+  sharedElevation,
   typedItems,
   restoreTypedItems,
   conditionIds,
@@ -59,7 +60,7 @@ import { LOSS_GROUPS, LOSS_ITEMS, lossItemsOf } from './path-losses.mjs';
 import { attachHelp } from './help.mjs';
 import { initSlant, currentOrbit, SLANT_IDS, orbitRecord, setOrbitRecord } from './slant.mjs';
 import { initPass, showPass, showAvailability } from './pass.mjs';
-import { skyTemperature } from './satellite.mjs';
+import { skyTemperature, groundShare } from './satellite.mjs';
 import { noisePower } from './signals.mjs';
 import { t, locale } from './i18n.mjs';
 
@@ -901,11 +902,37 @@ function buildSkyCalculator() {
     followSky();
   };
   $('sky-calc-run').onclick = () => skyCalculate(false);
+  $('sky-ground-zero').onclick = () => {
+    setGround(0);
+    $('sky-ground-note').textContent = t('Ideal lower bound: neither the main beam nor the sidelobes see the ground, as for a large low-sidelobe dish at high elevation.');
+  };
+  $('sky-ground-s465').onclick = () => {
+    const el = sharedElevation();
+    if (!(el >= 5 && el <= 90)) {
+      $('sky-ground-note').textContent = t('Enter an elevation angle between 5° and 90° in the shared conditions.');
+      return;
+    }
+    const ts = surfaceTemperature();
+    const ground = ts === null ? 290 : ts + 273.15;
+    const share = groundShare(el);
+    const value = Number((share * ground).toFixed(1));
+    setGround(value);
+    $('sky-ground-note').textContent = t(
+      'Elevation {elevation}°: {share} % of the ITU-R S.465 pattern looks at the ground, × {ground} K ground = {value} K. The pattern follows the sidelobe peaks, so this is an upper bound; a good dish usually picks up less.',
+      { elevation: fmt(el), share: fmt(100 * share, 1), ground: fmt(ground, 1), value: fmt(value, 1) },
+    );
+  };
   for (const id of ['sky-atten', 'sky-tmr', 'sky-ground']) {
     $(id).addEventListener('input', () => {
       if (sky.temp !== null && $('antenna-temp').value === sky.temp) skyCalculate(true);
     });
   }
+}
+
+/** Sets the ground pickup, and recalculates the antenna temperature once an attenuation is entered. */
+function setGround(value) {
+  $('sky-ground').value = String(value);
+  if (number($('sky-atten').value) >= 0) skyCalculate(false);
 }
 
 /** Fills the antenna temperature from the sky noise fields; quiet skips invalid fields silently. */

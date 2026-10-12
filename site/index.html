@@ -365,6 +365,11 @@
                 <summary>Estimate the antenna temperature from the sky (ITU-R P.618)</summary>
                 <div id="sky-calc-fields" class="fields"></div>
                 <div class="actions">
+                  <button type="button" id="sky-ground-zero">T_g = 0 K: Low-Sidelobe Dish</button>
+                  <button type="button" id="sky-ground-s465">T_g from ITU-R S.465 at This Elevation</button>
+                </div>
+                <p id="sky-ground-note" class="hint" aria-live="polite"></p>
+                <div class="actions">
                   <button type="button" id="sky-calc-path">Use the Path's Atmospheric and Cloud Loss</button>
                   <button type="button" id="sky-calc-run">Calculate and Fill</button>
                 </div>
@@ -374,6 +379,9 @@
                   <h4>Formulas</h4>
                   <!-- eq:sky-temperature --><div class="eq"><math display="block"><mrow><msub><mi>T</mi><mi>a</mi></msub><mo>&#x0003D;</mo><msub><mi>T</mi><mrow><mi>m</mi><mi>r</mi></mrow></msub><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mn>1</mn><mo>&#x02212;</mo><msup><mn>10</mn><mrow><mo>&#x02212;</mo><mi>A</mi><mo>&#x0002F;</mo><mn>10</mn></mrow></msup><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mo>&#x0002B;</mo><mn>2.7</mn><mo>&#x000B7;</mo><msup><mn>10</mn><mrow><mo>&#x02212;</mo><mi>A</mi><mo>&#x0002F;</mo><mn>10</mn></mrow></msup><mo>&#x0002B;</mo><msub><mi>T</mi><mi>g</mi></msub></mrow></math></div><!-- /eq -->
                   <p class="caption">A: atmospheric attenuation excluding scintillation (dB); T<sub>mr</sub>: mean radiating temperature, 275 K without local data, or 37.34 + 0.81 T<sub>s</sub> (K) in clear or cloudy weather; T<sub>g</sub>: ground pickup through sidelobes and spillover.</p>
+                  <!-- eq:sky-ground --><div class="eq"><math display="block"><mrow><msub><mi>T</mi><mi>g</mi></msub><mo>&#x0003D;</mo><mfrac><mrow><msub><mi>T</mi><mi>s</mi></msub></mrow><mrow><mn>4</mn><mi>&#x003C0;</mi></mrow></mfrac><msub><mo>&#x0222B;</mo><mrow><mtext>ground</mtext></mrow></msub><mi>G</mi><mo stretchy="false">&#x00028;</mo><mi>&#x003C6;</mi><mo stretchy="false">&#x00029;</mo><mspace width="0.167em" /><mi>d</mi><mi>&#x003A9;</mi></mrow></math></div><!-- /eq -->
+                  <!-- eq:sky-ground-pattern --><div class="eq"><math display="block"><mrow><mi>G</mi><mo stretchy="false">&#x00028;</mo><mi>&#x003C6;</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mn>32</mn><mo>&#x02212;</mo><mn>25</mn><msub><mi>log</mi><mrow><mn>10</mn></mrow></msub><mspace width="0.167em" /><mi>&#x003C6;</mi><mtext>&#x000A0;</mtext><mtext>dBi</mtext><mspace width="0.278em" /><mspace width="0.278em" /><mo stretchy="false">&#x00028;</mo><msup><mn>1</mn><mo>&#x02218;</mo></msup><mo>&#x02264;</mo><mi>&#x003C6;</mi><mo>&#x0003C;</mo><msup><mn>48</mn><mo>&#x02218;</mo></msup><mo stretchy="false">&#x00029;</mo><mo>&#x0002C;</mo><mspace width="1em" /><mi>G</mi><mo stretchy="false">&#x00028;</mo><mi>&#x003C6;</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mo>&#x02212;</mo><mn>10</mn><mtext>&#x000A0;</mtext><mtext>dBi</mtext><mspace width="0.278em" /><mspace width="0.278em" /><mo stretchy="false">&#x00028;</mo><msup><mn>48</mn><mo>&#x02218;</mo></msup><mo>&#x02264;</mo><mi>&#x003C6;</mi><mo>&#x02264;</mo><msup><mn>180</mn><mo>&#x02218;</mo></msup><mo stretchy="false">&#x00029;</mo></mrow></math></div><!-- /eq -->
+                  <p class="caption">ITU-R P.372: the antenna temperature is the antenna pattern averaged over the brightness temperature around it; T<sub>g</sub> is the part from below the horizon. G(φ): ITU-R S.465 reference pattern at φ° from boresight (the envelope of the sidelobe peaks, 2 to 31 GHz), so the result is an upper bound; the ground is taken as a black body at the surface temperature T<sub>s</sub> of the shared conditions (290 K when blank).</p>
                 </div>
               </details>
               <p class="hint">RX antenna → cable → amplifier → receiver, or the amplifier first for a masthead LNA. Include connectors and adapters in the cable loss. Enter 0 dB gain if there is no amplifier. The position changes the system noise figure, not the received power.</p>

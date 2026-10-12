@@ -26,6 +26,34 @@ export function skyTemperature(A, tmr = 275) {
   return tmr * (1 - transmission) + 2.7 * transmission;
 }
 
+/** ITU-R S.465-6 earth-station reference pattern (dBi) at φ° off boresight, 2 to 31 GHz, D/λ ≥ 50. */
+export function s465Gain(phi) {
+  return phi < 48 ? 32 - 25 * Math.log10(Math.max(phi, 1)) : -10;
+}
+
+/**
+ * Share of the ITU-R S.465 pattern below the horizon for an antenna at elevation el°: (1/4π) ∫ G dΩ
+ * over the ground, the weight the ground's brightness temperature gets in the antenna temperature
+ * (ITU-R P.372 Part 3). The pattern is the envelope of the sidelobe peaks, so this is an upper bound.
+ */
+export function groundShare(el) {
+  const rad = Math.PI / 180;
+  const step = 0.25;
+  const e = el * rad;
+  let sum = 0;
+  for (let b = -90 + step / 2; b < 0; b += step) {
+    const cb = Math.cos(b * rad);
+    const sb = Math.sin(b * rad);
+    for (let a = step / 2; a < 180; a += step) {
+      const cosPhi = Math.sin(e) * sb + Math.cos(e) * cb * Math.cos(a * rad);
+      const phi = Math.acos(Math.min(1, Math.max(-1, cosPhi))) / rad;
+      sum += 10 ** (s465Gain(phi) / 10) * cb;
+    }
+  }
+  // Both sides of the boresight plane, each cell step² in solid angle.
+  return (2 * sum * (step * rad) ** 2) / (4 * Math.PI);
+}
+
 /**
  * The first x at which ys reaches level, interpolating linearly between samples, scanning from the
  * start (rising) or the end (falling); null when it never does.

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { slantRange, meanRadiatingTemperature, skyTemperature, crossing, ranges } from '../site/satellite.mjs';
+import { slantRange, meanRadiatingTemperature, skyTemperature, crossing, ranges, s465Gain, groundShare } from '../site/satellite.mjs';
 
 const near = (a, b, tol = 1e-9) => assert.ok(Math.abs(a - b) < tol, `${a} != ${b}`);
 
@@ -39,4 +39,16 @@ test('Ranges list every stretch at or above the level', () => {
   assert.equal(r.length, 1);
   near(r[0][0], 5);
   near(r[0][1], 35);
+});
+
+test('Ground pickup from the ITU-R S.465 pattern', () => {
+  near(s465Gain(1), 32);
+  near(s465Gain(10), 7);
+  near(s465Gain(48), -10);
+  // Looking straight up, the whole ground is behind 48°: −10 dBi over half the sphere, 5 %.
+  near(groundShare(90), 0.05, 1e-4);
+  // Lower, the near sidelobes reach the ground (reference: the same integral on a finer grid in NumPy).
+  near(groundShare(5), 0.090, 2e-3);
+  near(groundShare(10), 0.068, 2e-3);
+  assert.ok(groundShare(5) > groundShare(20) && groundShare(20) > groundShare(60));
 });
