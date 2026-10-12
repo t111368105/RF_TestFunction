@@ -811,7 +811,7 @@ export function initEstimator({ link, fill }) {
     'beforeend',
     `<label for="atmo-path">${t('Path')}<select id="atmo-path">` +
       `<option value="terrestrial">${t('Terrestrial (horizontal)')}</option>` +
-      `<option value="slant">${t('Earth–space (satellite)')}</option></select></label>` +
+      `<option value="slant" selected>${t('Earth–space (satellite)')}</option></select></label>` +
       fieldsHtml(COMMON),
   );
   for (const [key, item] of Object.entries(ITEMS)) {

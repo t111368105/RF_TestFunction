@@ -17,8 +17,6 @@ export const ZH_TW = {
   "LINK BUDGET": "鏈路預算",
   "RF Link Budget": "射頻鏈路預算",
   "Follow the power from transmitter to receiver and check the design margin at every stage.": "追蹤從發射端到接收端每一階段的功率，並檢查設計餘裕。",
-  "Calculation animation": "計算動畫",
-  "Haptic feedback (supported devices)": "觸覺回饋（支援的裝置）",
   "01 <span>Transmitter</span>": "01 <span>發射端</span>",
   "Transmitter → TX cable → TX antenna. Include connectors and adapters in the cable loss. 0 dBd = 2.15 dBi.": "發射機 → TX 纜線 → TX 天線。接頭與轉接頭的損耗請算進纜線損耗。0 dBd = 2.15 dBi。",
   "02 <span>Path</span>": "02 <span>傳播路徑</span>",

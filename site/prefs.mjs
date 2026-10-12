@@ -1,4 +1,4 @@
-// Appearance, calculation animation and haptic feedback preferences.
+// Appearance preference.
 
 import { $, read, write } from './ui.mjs';
 
@@ -12,18 +12,10 @@ function applyTheme() {
 export function initPrefs() {
   const prefs = read('rf.prefs', {});
   $('theme').value = ['system', 'light', 'dark'].includes(prefs.theme) ? prefs.theme : 'system';
-  $('animation').checked = prefs.animation !== false;
-  $('haptics').checked = prefs.haptics === true;
   applyTheme();
   media.addEventListener('change', applyTheme);
-  for (const id of ['theme', 'animation', 'haptics']) {
-    $(id).onchange = () => {
-      applyTheme();
-      write('rf.prefs', {
-        theme: $('theme').value,
-        animation: $('animation').checked,
-        haptics: $('haptics').checked,
-      });
-    };
-  }
+  $('theme').onchange = () => {
+    applyTheme();
+    write('rf.prefs', { theme: $('theme').value });
+  };
 }

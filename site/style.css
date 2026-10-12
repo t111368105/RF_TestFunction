@@ -479,8 +479,7 @@ button:disabled {
 }
 
 .hint,
-.assumptions,
-.settings {
+.assumptions {
   font-size: 14px;
   color: var(--muted);
 }
@@ -489,10 +488,6 @@ button:disabled {
 .assumptions,
 .formulas .caption {
   max-width: var(--text-width);
-}
-
-.settings label {
-  margin: 5px 0;
 }
 
 .error {
@@ -852,16 +847,6 @@ footer span {
 
 #print-report {
   display: none;
-}
-
-.pulse {
-  animation: pulse .5s ease-out;
-}
-
-@keyframes pulse {
-  50% {
-    box-shadow: 0 0 0 6px #5a8fff66;
-  }
 }
 
 /* ---------- Media queries ---------- */

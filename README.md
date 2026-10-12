@@ -24,7 +24,7 @@ RFLinkBudget SwiftUI 專案的繁體中文網頁版，採原生 HTML/CSS/JavaScr
 - 本機方案儲存、載入、分析、刪除及雙方案比較。
 - 可列印的完整報告：按「PDF 報告／列印」，於瀏覽器列印視窗儲存為 PDF。
 - 雙向 dBm/W、單程一階 Doppler、頻率及徑向速度單位換算。
-- 響應式排版、系統／深／淺色、減少動態效果偏好、計算動畫、支援瀏覽器的觸覺回饋。
+- 響應式排版、系統／深／淺色、減少動態效果偏好。
 
 ## 程式結構
 
@@ -53,7 +53,7 @@ RFLinkBudget SwiftUI 專案的繁體中文網頁版，採原生 HTML/CSS/JavaScr
 | `site/help.mjs` | 傳播路徑各欄位下方的說明文字 |
 | `site/plans.mjs` | Saved Plans 頁：方案清單、刪除、雙方案比較 |
 | `site/tools.mjs` | Power Converter 與 Doppler Shift 頁 |
-| `site/prefs.mjs` | 外觀、動畫與觸覺回饋偏好 |
+| `site/prefs.mjs` | 外觀偏好 |
 | `site/app.mjs` | 進入點：分頁切換與各模組串接 |
 
 ## 介面語言
@@ -116,7 +116,7 @@ for f in site/*.mjs; do node --check "$f"; done
 
 所有計算均在瀏覽器執行。方案與偏好透過 localStorage 存在同一個瀏覽器，不會同步至 GitHub 或其他裝置。清除網站資料、切換網域或使用無痕視窗可能使方案不可用。儲存失敗時會顯示通知。
 
-PDF 使用瀏覽器的列印／儲存功能；分享 PDF 使用裝置自身的檔案分享功能。觸覺回饋取決於 Vibration API 支援，iOS Safari 等不支援時會略過。
+PDF 使用瀏覽器的列印／儲存功能；分享 PDF 使用裝置自身的檔案分享功能。
 
 公式沿用 Swift 原版：FSPL 常數 32.44；雜訊常數 −173.975；c = 299792458 m/s。總 NF 參考至 RX 天線輸出，SNR 使用 RX 天線輸出功率。最大距離依靈敏度及餘裕計算，不依 SNR。詳細物理限制見網頁內模型假設。
 

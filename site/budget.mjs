@@ -260,8 +260,8 @@ function showIncomplete(message) {
   const density = noiseDensity(n.nf, n.ta);
   const floor = density && n.bandwidth > 0 ? density.n0 + 10 * Math.log10(n.bandwidth) : null;
   const metrics = [
-    [t('Free-space loss'), partial.fspl, 'dB'],
     [t('EIRP'), partial.eirp, 'dBm'],
+    [t('Free-space loss'), partial.fspl, 'dB'],
     [t('RX antenna output'), partial.received, 'dBm'],
     [t('Receiver input'), partial.output, 'dBm'],
     [t('Noise floor'), Number.isFinite(floor) ? floor : null, 'dBm'],
@@ -386,13 +386,6 @@ function compute({ live }) {
   }
   $('error').textContent = '';
   showSnapshot();
-  if (live) return;
-  if ($('animation').checked && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    $('result').classList.remove('pulse');
-    void $('result').offsetWidth; // Restart the CSS animation.
-    $('result').classList.add('pulse');
-  }
-  if ($('haptics').checked && navigator.vibrate) navigator.vibrate(30);
 }
 
 function calculate(e) {
@@ -465,11 +458,11 @@ function undoClear() {
 
 function resultHtml(r) {
   const n = noiseFor(snapshot.values);
+  // In the order the signal meets them: the path, the antenna, the receiver, then the noise.
   const metrics = [
-    [t('Receiver input'), r.output, 'dBm'],
-    [t('RX antenna output'), r.received, 'dBm'],
     [t('Free-space loss'), r.fspl, 'dB'],
-    [t('Maximum distance'), r.maxDistance, 'km'],
+    [t('RX antenna output'), r.received, 'dBm'],
+    [t('Receiver input'), r.output, 'dBm'],
     ...(n
       ? [
           [t('Noise floor'), n.floor, 'dBm'],
@@ -477,6 +470,7 @@ function resultHtml(r) {
           [t('SNR margin'), n.margin, 'dB'],
         ]
       : []),
+    [t('Maximum distance'), r.maxDistance, 'km'],
   ]
     .map(([l, v, u]) => `<div><small>${l}</small><strong>${fmt(v)} ${u}</strong></div>`)
     .join('');
