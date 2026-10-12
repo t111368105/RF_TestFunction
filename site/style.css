@@ -999,3 +999,24 @@ footer span {
     font-size: 10pt;
   }
 }
+
+/* ---------- DVB-S2 page ---------- */
+
+.chart .bar-label {
+  fill: var(--ink);
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.chart a:hover rect {
+  fill-opacity: .3;
+}
+
+/* Frame bars and block diagrams keep readable text on a phone and scroll sideways instead. */
+.chart:has(> svg.wide) {
+  overflow-x: auto;
+}
+
+.chart svg.wide {
+  min-width: 540px;
+}

@@ -61,6 +61,7 @@
       <button data-tab="power">Power Converter</button>
       <button data-tab="doppler">Doppler Shift</button>
       <button data-tab="learn">Learn</button>
+      <button data-tab="dvbs2">DVB-S2</button>
       <button data-tab="plans">Saved Plans <span id="count">0</span></button>
     </nav>
 
@@ -813,6 +814,314 @@
             <!-- eq:learn-aperture --><div class="eq"><math display="block"><mrow><msub><mi>A</mi><mi>e</mi></msub><mo>&#x0003D;</mo><mfrac><mrow><mi>G</mi><msup><mi>&#x003BB;</mi><mn>2</mn></msup></mrow><mrow><mn>4</mn><mi>&#x003C0;</mi></mrow></mfrac><mo>&#x0002C;</mo><mspace width="1em" /><mi>P</mi><mo>&#x0003D;</mo><mi>S</mi><mo>&#x000B7;</mo><msub><mi>A</mi><mi>e</mi></msub></mrow></math></div><!-- /eq -->
             <!-- eq:learn-antenna-temp --><div class="eq"><math display="block"><mrow><msub><mi>T</mi><mi>a</mi></msub><mo>&#x0003D;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>4</mn><mi>&#x003C0;</mi></mrow></mfrac><mo>&#x0222E;</mo><mi>G</mi><mo stretchy="false">&#x00028;</mo><mi>&#x003B8;</mi><mo>&#x0002C;</mo><mi>&#x003C6;</mi><mo stretchy="false">&#x00029;</mo><mspace width="0.167em" /><mi>T</mi><mo stretchy="false">&#x00028;</mo><mi>&#x003B8;</mi><mo>&#x0002C;</mo><mi>&#x003C6;</mi><mo stretchy="false">&#x00029;</mo><mspace width="0.167em" /><mi>d</mi><mi>&#x003A9;</mi><mo>&#x0002C;</mo><mspace width="1em" /><mfrac><mrow><mn>1</mn></mrow><mrow><mn>4</mn><mi>&#x003C0;</mi></mrow></mfrac><mo>&#x0222E;</mo><mi>G</mi><mspace width="0.167em" /><mi>d</mi><mi>&#x003A9;</mi><mo>&#x0003D;</mo><mn>1</mn><mo>&#x0002C;</mo><mspace width="1em" /><mi>N</mi><mo>&#x0003D;</mo><mi>k</mi><msub><mi>T</mi><mi>a</mi></msub><mi>B</mi></mrow></math></div><!-- /eq -->
             <p class="caption">S: power flux density of the signal (W/m²); G(θ, φ): antenna gain towards each direction; T(θ, φ): temperature of what lies in that direction. The gain averages to 1 over all directions, so a uniform 290 K scene gives T<sub>a</sub> = 290 K whatever the gain. The chart uses the signal of a 0 dBi antenna of −118.47 dBm, a 1 MHz bandwidth, a 10 K sky and 290 K ground, with a simplified share of the beam on the ground.</p>
+          </div>
+        </article>
+      </section>
+
+      <!-- DVB-S2: transmit and receive chain, drawn by dvbs2-page.mjs -->
+      <section id="dvbs2" class="page" hidden>
+        <p class="eyebrow">DVB-S2</p>
+        <h1>DVB-S2 Transmitter and Receiver</h1>
+        <p class="lead">DVB-S2 (ETSI EN 302 307-1) is the satellite broadcasting and broadband standard behind most digital satellite TV and many data links. Follow a stream through every stage of the transmitter and back out of the receiver. The settings below apply to every section, and each figure follows them.</p>
+
+        <article id="s2-settings" class="learn">
+          <h3>Transmission settings</h3>
+          <div class="fields">
+            <label for="s2-modcod">MODCOD (modulation and code rate)<select id="s2-modcod"></select></label>
+            <label for="s2-frame">FECFRAME length<select id="s2-frame">
+                <option value="normal">Normal (64 800 bits)</option>
+                <option value="short">Short (16 200 bits)</option>
+              </select></label>
+            <label for="s2-rolloff">Roll-off α<select id="s2-rolloff">
+                <option value="0.35">0.35</option>
+                <option value="0.25">0.25</option>
+                <option value="0.2" selected>0.20</option>
+              </select></label>
+            <label for="s2-rs">Symbol rate<div class="input-unit"><input id="s2-rs" inputmode="decimal" value="30"><span>Msym/s</span></div></label>
+            <label class="check"><input type="checkbox" id="s2-pilots"> Pilots</label>
+          </div>
+          <div id="s2-summary"></div>
+          <div id="s2-diagram" class="chart"></div>
+          <p class="hint">Select a block to jump to its section. The transmitter is fully specified by the standard; the receiver is up to each manufacturer, so its stages show the usual techniques.</p>
+        </article>
+
+        <h2 class="subhead">Transmitter</h2>
+
+        <article id="s2-tx1" class="learn">
+          <h3>1. Mode adaptation: input stream to BBHEADER and DATA FIELD</h3>
+          <p>The input is usually an MPEG transport stream of 188-byte packets. For adaptive coding (ACM), null packets (PID 8191) can be removed and re-inserted at the receiver. Each packet's sync byte is replaced by a CRC-8 of the previous packet, so the receiver can check every packet. The stream is then sliced into DATA FIELDs, and an 80-bit <strong>BBHEADER</strong> in front of each tells the receiver how to rebuild the stream.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Field</th><th>Size</th><th>Content</th></tr></thead>
+              <tbody>
+                <tr><td>MATYPE</td><td>2 bytes</td><td>Stream type (TS or generic), single or multiple streams, CCM or ACM/VCM, input stream synchronizer, null-packet deletion, roll-off</td></tr>
+                <tr><td>UPL</td><td>2 bytes</td><td>User packet length in bits (1504 for a transport stream; 0 for a continuous stream)</td></tr>
+                <tr><td>DFL</td><td>2 bytes</td><td>DATA FIELD length in bits</td></tr>
+                <tr><td>SYNC</td><td>1 byte</td><td>The user packet sync byte (0x47 for a transport stream)</td></tr>
+                <tr><td>SYNCD</td><td>2 bytes</td><td>Distance in bits from the start of the DATA FIELD to the first complete user packet</td></tr>
+                <tr><td>CRC-8</td><td>1 byte</td><td>Error detection on the first 9 bytes of the BBHEADER</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="s2-bbframe" class="chart"></div>
+          <p id="s2-bbframe-note" class="hint"></p>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:s2-crc8 --><div class="eq"><math display="block"><mrow><mi>g</mi><mo stretchy="false">&#x00028;</mo><mi>X</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><msup><mi>X</mi><mn>8</mn></msup><mo>&#x0002B;</mo><msup><mi>X</mi><mn>7</mn></msup><mo>&#x0002B;</mo><msup><mi>X</mi><mn>6</mn></msup><mo>&#x0002B;</mo><msup><mi>X</mi><mn>4</mn></msup><mo>&#x0002B;</mo><msup><mi>X</mi><mn>2</mn></msup><mo>&#x0002B;</mo><mn>1</mn><mo>&#x0002C;</mo><mspace width="1em" /><mtext>CRC</mtext><mo>&#x0003D;</mo><mtext>remainder</mtext><mrow><mo stretchy="true" fence="true" form="prefix">[</mo><msup><mi>X</mi><mn>8</mn></msup><mi>u</mi><mo stretchy="false">&#x00028;</mo><mi>X</mi><mo stretchy="false">&#x00029;</mo><mi>:</mi><mi>g</mi><mo stretchy="false">&#x00028;</mo><mi>X</mi><mo stretchy="false">&#x00029;</mo><mo stretchy="true" fence="true" form="postfix">]</mo></mrow></mrow></math></div><!-- /eq -->
+            <!-- eq:s2-dfl --><div class="eq"><math display="block"><mrow><mn>0</mn><mo>&#x02264;</mo><mtext>DFL</mtext><mo>&#x02264;</mo><msub><mi>K</mi><mrow><mi>b</mi><mi>c</mi><mi>h</mi></mrow></msub><mo>&#x02212;</mo><mn>80</mn><mo>&#x0002C;</mo><mspace width="1em" /><mtext>padding</mtext><mo>&#x0003D;</mo><msub><mi>K</mi><mrow><mi>b</mi><mi>c</mi><mi>h</mi></mrow></msub><mo>&#x02212;</mo><mtext>DFL</mtext><mo>&#x02212;</mo><mn>80</mn></mrow></math></div><!-- /eq -->
+            <p class="caption">u(X): the user packet without its sync byte; K<sub>bch</sub>: BBFRAME length for the code rate (table 5a/5b). For broadcasting, DFL = K<sub>bch</sub> − 80, so the frame needs no padding.</p>
+          </div>
+        </article>
+
+        <article id="s2-tx2" class="learn">
+          <h3>2. Stream adaptation: padding and BB scrambling</h3>
+          <p>Zero bits pad the BBFRAME up to K<sub>bch</sub> bits when the DATA FIELD is shorter. The whole BBFRAME is then XORed with a pseudo-random sequence, restarted at every frame, so long runs of equal bits do not concentrate the spectrum (energy dispersal). Enter some bits to see them scrambled; the receiver applies the same sequence again to restore them.</p>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <label for="s2-prbs-in">BBFRAME bits (first 64)<textarea id="s2-prbs-in" rows="3" spellcheck="false">0100011100000000000000000000000000000000000000000000000000000000</textarea></label>
+            </div>
+            <div class="learn-plots">
+              <div id="s2-prbs-out" class="mono"></div>
+            </div>
+          </div>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:s2-prbs --><div class="eq"><math display="block"><mrow><mn>1</mn><mo>&#x0002B;</mo><msup><mi>X</mi><mrow><mn>14</mn></mrow></msup><mo>&#x0002B;</mo><msup><mi>X</mi><mrow><mn>15</mn></mrow></msup></mrow></math></div><!-- /eq -->
+            <p class="caption">A 15-stage shift register loaded with 100101010000000 at the start of every BBFRAME; its output is XORed with the data from the first bit to bit K<sub>bch</sub>.</p>
+          </div>
+        </article>
+
+        <article id="s2-tx3" class="learn">
+          <h3>3. FEC encoding: BCH outer code and LDPC inner code</h3>
+          <p>Two error-correcting codes protect each BBFRAME. The <strong>LDPC</strong> code does most of the work: its long 64 800-bit block (or 16 200 bits) comes within about 0.7 to 1 dB of the Shannon limit. The small <strong>BCH</strong> code outside it corrects the few errors the LDPC decoder may leave, so the output is quasi error free (PER 10<sup>−7</sup>). Both are systematic: the data bits pass unchanged and parity bits are appended.</p>
+          <div id="s2-fecframe" class="chart"></div>
+          <div id="s2-fec-table"></div>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:s2-bch --><div class="eq"><math display="block"><mrow><mi>c</mi><mo stretchy="false">&#x00028;</mo><mi>x</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><msup><mi>x</mi><mrow><msub><mi>N</mi><mrow><mi>b</mi><mi>c</mi><mi>h</mi></mrow></msub><mo>&#x02212;</mo><msub><mi>K</mi><mrow><mi>b</mi><mi>c</mi><mi>h</mi></mrow></msub></mrow></msup><mi>m</mi><mo stretchy="false">&#x00028;</mo><mi>x</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0002B;</mo><mi>d</mi><mo stretchy="false">&#x00028;</mo><mi>x</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0002C;</mo><mspace width="1em" /><mi>d</mi><mo stretchy="false">&#x00028;</mo><mi>x</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><msup><mi>x</mi><mrow><msub><mi>N</mi><mrow><mi>b</mi><mi>c</mi><mi>h</mi></mrow></msub><mo>&#x02212;</mo><msub><mi>K</mi><mrow><mi>b</mi><mi>c</mi><mi>h</mi></mrow></msub></mrow></msup><mi>m</mi><mo stretchy="false">&#x00028;</mo><mi>x</mi><mo stretchy="false">&#x00029;</mo><mo>mod</mo><mi>g</mi><mo stretchy="false">&#x00028;</mo><mi>x</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div><!-- /eq -->
+            <!-- eq:s2-ldpc --><div class="eq"><math display="block"><mrow><msub><mi>p</mi><mi>a</mi></msub><mo>&#x0003D;</mo><msub><mi>p</mi><mi>a</mi></msub><mo>&#x02295;</mo><msub><mi>i</mi><mi>m</mi></msub><mo>&#x0002C;</mo><mspace width="1em" /><mi>a</mi><mo>&#x0003D;</mo><mrow><mo stretchy="true" fence="true" form="prefix">&#x0007B;</mo><mi>x</mi><mo>&#x0002B;</mo><mo stretchy="false">&#x00028;</mo><mi>m</mi><mo>mod</mo><mn>360</mn><mo stretchy="false">&#x00029;</mo><mspace width="0.167em" /><mi>q</mi><mo stretchy="true" fence="true" form="postfix">&#x0007D;</mo></mrow><mo>mod</mo><mo stretchy="false">&#x00028;</mo><msub><mi>n</mi><mrow><mi>l</mi><mi>d</mi><mi>p</mi><mi>c</mi></mrow></msub><mo>&#x02212;</mo><msub><mi>k</mi><mrow><mi>l</mi><mi>d</mi><mi>p</mi><mi>c</mi></mrow></msub><mo stretchy="false">&#x00029;</mo></mrow></math></div><!-- /eq -->
+            <!-- eq:s2-ldpc-final --><div class="eq"><math display="block"><mrow><msub><mi>p</mi><mi>i</mi></msub><mo>&#x0003D;</mo><msub><mi>p</mi><mi>i</mi></msub><mo>&#x02295;</mo><msub><mi>p</mi><mrow><mi>i</mi><mo>&#x02212;</mo><mn>1</mn></mrow></msub><mo>&#x0002C;</mo><mspace width="1em" /><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn><mo>&#x0002C;</mo><mi>&#x02026;</mi><mo>&#x0002C;</mo><msub><mi>n</mi><mrow><mi>l</mi><mi>d</mi><mi>p</mi><mi>c</mi></mrow></msub><mo>&#x02212;</mo><msub><mi>k</mi><mrow><mi>l</mi><mi>d</mi><mi>p</mi><mi>c</mi></mrow></msub><mo>&#x02212;</mo><mn>1</mn></mrow></math></div><!-- /eq -->
+            <p class="caption">g(x): product of the first t BCH polynomials (table 6a/6b). LDPC: each information bit i<sub>m</sub> is added (XOR) into parity accumulators whose addresses x come from annex B (one row per group of 360 bits); q is the code's step (table 7a/7b). A final running XOR gives the parity bits.</p>
+          </div>
+        </article>
+
+        <article id="s2-tx4" class="learn">
+          <h3>4. Bit interleaving (8PSK, 16APSK, 32APSK)</h3>
+          <p>The FECFRAME is written into a block interleaver column by column and read out row by row. Each modulation symbol therefore takes its bits from different parts of the codeword, so a symbol hit by noise damages bits the LDPC decoder can correct separately. QPSK, whose two bits are equally reliable, is not interleaved.</p>
+          <div id="s2-interleaver" class="chart"></div>
+          <p id="s2-interleaver-note" class="hint"></p>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:s2-interleaver --><div class="eq"><math display="block"><mrow><mtext>column</mtext><mo>&#x0003D;</mo><mrow><mo stretchy="true" fence="true" form="prefix">&#x0230A;</mo><mi>k</mi><mo>&#x0002F;</mo><mi>R</mi><mo stretchy="true" fence="true" form="postfix">&#x0230B;</mo></mrow><mo>&#x0002C;</mo><mspace width="1em" /><mtext>row</mtext><mo>&#x0003D;</mo><mi>k</mi><mo>mod</mo><mi>R</mi><mo>&#x0002C;</mo><mspace width="1em" /><mi>R</mi><mo>&#x0003D;</mo><msub><mi>n</mi><mrow><mi>l</mi><mi>d</mi><mi>p</mi><mi>c</mi></mrow></msub><mo>&#x0002F;</mo><mi>C</mi></mrow></math></div><!-- /eq -->
+            <p class="caption">Bit k of the FECFRAME is written to row k mod R of column ⌊k / R⌋; the rows are read out in order, one symbol's bits per row. R = n<sub>ldpc</sub> / C rows and C columns (table 8).</p>
+          </div>
+        </article>
+
+        <article id="s2-tx5" class="learn">
+          <h3>5. Mapping into the constellation</h3>
+          <p>Groups of 2 to 5 bits select one point: Gray-coded QPSK and 8PSK, or amplitude and phase shift keying (APSK) with points on 2 or 3 rings. APSK suits satellite amplifiers, which compress high amplitudes: fewer rings than square QAM keep the signal closer to constant envelope. The ring ratio γ depends on the code rate (tables 9 and 10).</p>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <div id="s2-map-readout"></div>
+            </div>
+            <div class="learn-plots">
+              <div id="s2-constellation" class="chart constellation"></div>
+            </div>
+          </div>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:s2-apsk16 --><div class="eq"><math display="block"><mrow><msubsup><mi>R</mi><mn>1</mn><mn>2</mn></msubsup><mo>&#x0002B;</mo><mn>3</mn><msubsup><mi>R</mi><mn>2</mn><mn>2</mn></msubsup><mo>&#x0003D;</mo><mn>4</mn><mo>&#x0002C;</mo><mspace width="1em" /><mi>&#x003B3;</mi><mo>&#x0003D;</mo><msub><mi>R</mi><mn>2</mn></msub><mo>&#x0002F;</mo><msub><mi>R</mi><mn>1</mn></msub></mrow></math></div><!-- /eq -->
+            <!-- eq:s2-apsk32 --><div class="eq"><math display="block"><mrow><msubsup><mi>R</mi><mn>1</mn><mn>2</mn></msubsup><mo>&#x0002B;</mo><mn>3</mn><msubsup><mi>R</mi><mn>2</mn><mn>2</mn></msubsup><mo>&#x0002B;</mo><mn>4</mn><msubsup><mi>R</mi><mn>3</mn><mn>2</mn></msubsup><mo>&#x0003D;</mo><mn>8</mn><mo>&#x0002C;</mo><mspace width="1em" /><msub><mi>&#x003B3;</mi><mn>1</mn></msub><mo>&#x0003D;</mo><msub><mi>R</mi><mn>2</mn></msub><mo>&#x0002F;</mo><msub><mi>R</mi><mn>1</mn></msub><mo>&#x0002C;</mo><mspace width="1em" /><msub><mi>&#x003B3;</mi><mn>2</mn></msub><mo>&#x0003D;</mo><msub><mi>R</mi><mn>3</mn></msub><mo>&#x0002F;</mo><msub><mi>R</mi><mn>1</mn></msub></mrow></math></div><!-- /eq -->
+            <p class="caption">With unit average symbol energy. QPSK and 8PSK points lie on the unit circle, QPSK at odd multiples of π/4.</p>
+          </div>
+        </article>
+
+        <article id="s2-tx6" class="learn">
+          <h3>6. Physical layer framing: PLHEADER, pilots and PL scrambling</h3>
+          <p>The symbols are cut into SLOTs of 90 symbols. A one-slot <strong>PLHEADER</strong> goes first: a 26-symbol start-of-frame (SOF) pattern the receiver searches for, and a 64-symbol PLS code carrying the MODCOD and frame type, strongly protected and sent in robust π/2-BPSK. Optional <strong>pilot blocks</strong> of 36 known symbols every 16 slots help the receiver track the carrier phase. Finally every symbol after the header is rotated by a known pseudo-random multiple of 90° (PL scrambling).</p>
+          <div id="s2-plframe" class="chart"></div>
+          <div id="s2-plframe-table"></div>
+          <h4>PLHEADER of the selected mode</h4>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <div id="s2-plheader-bits" class="mono"></div>
+            </div>
+            <div class="learn-plots">
+              <div id="s2-plheader" class="chart constellation"></div>
+            </div>
+          </div>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:s2-plframe --><div class="eq"><math display="block"><mrow><msub><mi>N</mi><mrow><mi>P</mi><mi>L</mi></mrow></msub><mo>&#x0003D;</mo><mn>90</mn><mo stretchy="false">&#x00028;</mo><mi>S</mi><mo>&#x0002B;</mo><mn>1</mn><mo stretchy="false">&#x00029;</mo><mo>&#x0002B;</mo><mi>P</mi><mrow><mo stretchy="true" fence="true" form="prefix">&#x0230A;</mo><mfrac><mrow><mi>S</mi><mo>&#x02212;</mo><mn>1</mn></mrow><mrow><mn>16</mn></mrow></mfrac><mo stretchy="true" fence="true" form="postfix">&#x0230B;</mo></mrow><mo>&#x0002C;</mo><mspace width="1em" /><mi>S</mi><mo>&#x0003D;</mo><mfrac><mrow><msub><mi>n</mi><mrow><mi>l</mi><mi>d</mi><mi>p</mi><mi>c</mi></mrow></msub></mrow><mrow><mn>90</mn><mspace width="0.167em" /><msub><mi>&#x003B7;</mi><mrow><mi>M</mi><mi>O</mi><mi>D</mi></mrow></msub></mrow></mfrac></mrow></math></div><!-- /eq -->
+            <!-- eq:s2-pi2bpsk --><div class="eq"><math display="block"><mrow><msub><mi>I</mi><mrow><mn>2</mn><mi>i</mi><mo>&#x02212;</mo><mn>1</mn></mrow></msub><mo>&#x0003D;</mo><msub><mi>Q</mi><mrow><mn>2</mn><mi>i</mi><mo>&#x02212;</mo><mn>1</mn></mrow></msub><mo>&#x0003D;</mo><mfrac><mrow><mn>1</mn><mo>&#x02212;</mo><mn>2</mn><msub><mi>y</mi><mrow><mn>2</mn><mi>i</mi><mo>&#x02212;</mo><mn>1</mn></mrow></msub></mrow><mrow><msqrt><mrow><mn>2</mn></mrow></msqrt></mrow></mfrac><mo>&#x0002C;</mo><mspace width="1em" /><msub><mi>I</mi><mrow><mn>2</mn><mi>i</mi></mrow></msub><mo>&#x0003D;</mo><mo>&#x02212;</mo><msub><mi>Q</mi><mrow><mn>2</mn><mi>i</mi></mrow></msub><mo>&#x0003D;</mo><mo>&#x02212;</mo><mfrac><mrow><mn>1</mn><mo>&#x02212;</mo><mn>2</mn><msub><mi>y</mi><mrow><mn>2</mn><mi>i</mi></mrow></msub></mrow><mrow><msqrt><mrow><mn>2</mn></mrow></msqrt></mrow></mfrac></mrow></math></div><!-- /eq -->
+            <!-- eq:s2-scrambling --><div class="eq"><math display="block"><mrow><msub><mi>z</mi><mi>n</mi></msub><mo stretchy="false">&#x00028;</mo><mi>i</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mi>x</mi><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mo stretchy="false">&#x00028;</mo><mi>i</mi><mo>&#x0002B;</mo><mi>n</mi><mo stretchy="false">&#x00029;</mo><mo>mod</mo><mo stretchy="false">&#x00028;</mo><msup><mn>2</mn><mrow><mn>18</mn></mrow></msup><mo>&#x02212;</mo><mn>1</mn><mo stretchy="false">&#x00029;</mo><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mo>&#x02295;</mo><mi>y</mi><mo stretchy="false">&#x00028;</mo><mi>i</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0002C;</mo><mspace width="1em" /><msub><mi>R</mi><mi>n</mi></msub><mo stretchy="false">&#x00028;</mo><mi>i</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mn>2</mn><msub><mi>z</mi><mi>n</mi></msub><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mo stretchy="false">&#x00028;</mo><mi>i</mi><mo>&#x0002B;</mo><mn>131072</mn><mo stretchy="false">&#x00029;</mo><mo>mod</mo><mo stretchy="false">&#x00028;</mo><msup><mn>2</mn><mrow><mn>18</mn></mrow></msup><mo>&#x02212;</mo><mn>1</mn><mo stretchy="false">&#x00029;</mo><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mo>&#x0002B;</mo><msub><mi>z</mi><mi>n</mi></msub><mo stretchy="false">&#x00028;</mo><mi>i</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0002C;</mo><mspace width="1em" /><mi>C</mi><mo stretchy="false">&#x00028;</mo><mi>i</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><msup><mi>e</mi><mrow><mi>j</mi><msub><mi>R</mi><mi>n</mi></msub><mo stretchy="false">&#x00028;</mo><mi>i</mi><mo stretchy="false">&#x00029;</mo><mi>&#x003C0;</mi><mo>&#x0002F;</mo><mn>2</mn></mrow></msup></mrow></math></div><!-- /eq -->
+            <p class="caption">S = n<sub>ldpc</sub> / (90 η<sub>MOD</sub>) slots; P = 36 pilot symbols, each (1 + j)/√2. y: PLHEADER bits. x and y in the scrambler are m-sequences of 1 + x<sup>7</sup> + x<sup>18</sup> and 1 + y<sup>5</sup> + y<sup>7</sup> + y<sup>10</sup> + y<sup>18</sup>; n = 0 by default.</p>
+          </div>
+        </article>
+
+        <article id="s2-tx7" class="learn">
+          <h3>7. Baseband shaping and quadrature modulation</h3>
+          <p>Each symbol is shaped by a square-root raised cosine (SRRC) filter, which keeps the spectrum within R<sub>s</sub>(1 + α). The receiver applies the same filter, so the pair forms a raised cosine with no intersymbol interference. A smaller roll-off α packs carriers closer together. I and Q then modulate the carrier.</p>
+          <div id="s2-spectrum" class="chart"></div>
+          <div id="s2-spectrum-readout"></div>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:s2-rrc --><div class="eq"><math display="block"><mrow><mi>H</mi><mo stretchy="false">&#x00028;</mo><mi>f</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mrow><mo stretchy="true" fence="true" form="prefix">&#x0007B;</mo><mtable><mtr><mtd><mn>1</mn></mtd><mtd><mo stretchy="false">&#x0007C;</mo><mi>f</mi><mo stretchy="false">&#x0007C;</mo><mo>&#x0003C;</mo><msub><mi>f</mi><mi>N</mi></msub><mo stretchy="false">&#x00028;</mo><mn>1</mn><mo>&#x02212;</mo><mi>&#x003B1;</mi><mo stretchy="false">&#x00029;</mo></mtd></mtr><mtr><mtd><msqrt><mrow><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac><mo>&#x0002B;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac><mi>sin</mi><mspace width="0.167em" /><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mfrac><mrow><mi>&#x003C0;</mi></mrow><mrow><mn>2</mn><msub><mi>f</mi><mi>N</mi></msub></mrow></mfrac><mo>&#x000B7;</mo><mfrac><mrow><msub><mi>f</mi><mi>N</mi></msub><mo>&#x02212;</mo><mo stretchy="false">&#x0007C;</mo><mi>f</mi><mo stretchy="false">&#x0007C;</mo></mrow><mrow><mi>&#x003B1;</mi></mrow></mfrac><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow></mrow></msqrt></mtd><mtd><msub><mi>f</mi><mi>N</mi></msub><mo stretchy="false">&#x00028;</mo><mn>1</mn><mo>&#x02212;</mo><mi>&#x003B1;</mi><mo stretchy="false">&#x00029;</mo><mo>&#x02264;</mo><mo stretchy="false">&#x0007C;</mo><mi>f</mi><mo stretchy="false">&#x0007C;</mo><mo>&#x02264;</mo><msub><mi>f</mi><mi>N</mi></msub><mo stretchy="false">&#x00028;</mo><mn>1</mn><mo>&#x0002B;</mo><mi>&#x003B1;</mi><mo stretchy="false">&#x00029;</mo></mtd></mtr><mtr><mtd><mn>0</mn></mtd><mtd><mo stretchy="false">&#x0007C;</mo><mi>f</mi><mo stretchy="false">&#x0007C;</mo><mo>&#x0003E;</mo><msub><mi>f</mi><mi>N</mi></msub><mo stretchy="false">&#x00028;</mo><mn>1</mn><mo>&#x0002B;</mo><mi>&#x003B1;</mi><mo stretchy="false">&#x00029;</mo></mtd></mtr></mtable></mrow></mrow></math></div><!-- /eq -->
+            <!-- eq:s2-bandwidth --><div class="eq"><math display="block"><mrow><mi>B</mi><mo>&#x0003D;</mo><msub><mi>R</mi><mi>s</mi></msub><mo stretchy="false">&#x00028;</mo><mn>1</mn><mo>&#x0002B;</mo><mi>&#x003B1;</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0002C;</mo><mspace width="1em" /><msub><mi>R</mi><mi>b</mi></msub><mo>&#x0003D;</mo><mi>&#x003B7;</mi><mspace width="0.167em" /><msub><mi>R</mi><mi>s</mi></msub></mrow></math></div><!-- /eq -->
+            <p class="caption">f<sub>N</sub> = R<sub>s</sub>/2, the Nyquist frequency; η: useful bits per symbol after all overheads.</p>
+          </div>
+        </article>
+
+        <h2 class="subhead">Receiver</h2>
+
+        <article id="s2-rx1" class="learn">
+          <h3>1. Front end and matched filter</h3>
+          <p>The LNB on the dish amplifies the signal and converts it to L-band (950 to 2150 MHz). The tuner brings it to baseband I and Q, automatic gain control sets the level, and an ADC samples it, usually at two samples per symbol or more. A <strong>matched filter</strong>, the same SRRC as the transmitter's, maximizes the SNR at the sampling instants.</p>
+          <div id="s2-pulses" class="chart"></div>
+          <p class="hint">The SRRC pulse alone (dashed) is not zero at the other symbol instants, so it would leave intersymbol interference; after the matched filter the raised cosine (thick) crosses zero at every other instant (dots), and each sample holds one symbol only. The pulses follow the roll-off chosen at the top.</p>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:s2-matched --><div class="eq"><math display="block"><mrow><mi>y</mi><mo stretchy="false">&#x00028;</mo><mi>t</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mi>r</mi><mo stretchy="false">&#x00028;</mo><mi>t</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0002A;</mo><mi>h</mi><mo stretchy="false">&#x00028;</mo><mo>&#x02212;</mo><mi>t</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div><!-- /eq -->
+            <p class="caption">r(t): received baseband signal; h(t): SRRC impulse response. The cascade of the two SRRC filters is a raised cosine, which is zero at every other symbol instant.</p>
+          </div>
+        </article>
+
+        <article id="s2-rx2" class="learn">
+          <h3>2. Timing recovery and frame synchronization</h3>
+          <p>A <strong>timing error detector</strong>, such as Gardner's, compares samples halfway between symbols to adjust the sampling instant. The receiver then correlates the incoming symbols with the known 26-symbol SOF to find each frame. Correlating with differences of consecutive symbols keeps this working before the carrier frequency is known. It then decodes the PLS code, choosing the most likely of its 128 codewords, to learn the MODCOD, the frame length and whether pilots follow.</p>
+          <h4>Eye diagram and timing error</h4>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <label for="s2-timing">Sampling offset <output id="s2-timing-out"></output><input type="range" id="s2-timing" min="-0.5" max="0.5" step="0.05" value="0.2" data-unit="T"></label>
+              <div id="s2-eye-readout"></div>
+            </div>
+            <div class="learn-plots">
+              <div id="s2-eye" class="chart"></div>
+            </div>
+          </div>
+          <p class="hint">Matched filter output of the I branch for random symbols, overlaid over two symbol periods (noise-free). Sampling at the centre of the eye gives the widest opening; move the offset to see the opening close and the Gardner detector's average error point back to the centre. A smaller roll-off α narrows the eye in time.</p>
+          <h4>Finding the start of a frame</h4>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <label for="s2-sof-esn0">Es/N₀ <output id="s2-sof-esn0-out"></output><input type="range" id="s2-sof-esn0" min="-3" max="12" step="0.5" value="6" data-unit="dB"></label>
+              <label for="s2-sof-df">Frequency offset <output id="s2-sof-df-out"></output><input type="range" id="s2-sof-df" min="0" max="10" step="0.5" value="3" data-unit="% Rs"></label>
+              <div id="s2-sof-readout"></div>
+            </div>
+            <div class="learn-plots">
+              <div id="s2-sof" class="chart"></div>
+            </div>
+          </div>
+          <p class="hint">A received stream of 300 symbols with a PLHEADER starting at symbol 120. With a frequency offset the carrier turns a little every symbol, so a plain correlation with the SOF loses its peak; the differential correlation compares neighbouring symbols, cancels the rotation and still finds the frame.</p>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:s2-gardner --><div class="eq"><math display="block"><mrow><mi>e</mi><mo stretchy="false">&#x00028;</mo><mi>k</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mo>Re</mo><mrow><mo stretchy="true" fence="true" form="prefix">&#x0007B;</mo><msup><mi>y</mi><mo>&#x0002A;</mo></msup><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mi>k</mi><mo>&#x02212;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mrow><mo stretchy="true" fence="true" form="prefix">[</mo><mi>y</mi><mo stretchy="false">&#x00028;</mo><mi>k</mi><mo stretchy="false">&#x00029;</mo><mo>&#x02212;</mo><mi>y</mi><mo stretchy="false">&#x00028;</mo><mi>k</mi><mo>&#x02212;</mo><mn>1</mn><mo stretchy="false">&#x00029;</mo><mo stretchy="true" fence="true" form="postfix">]</mo></mrow><mo stretchy="true" fence="true" form="postfix">&#x0007D;</mo></mrow></mrow></math></div><!-- /eq -->
+            <!-- eq:s2-sof --><div class="eq"><math display="block"><mrow><mi>&#x0039B;</mi><mo stretchy="false">&#x00028;</mo><mi>n</mi><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mrow><mo stretchy="true" fence="true" form="prefix">&#x0007C;</mo><msubsup><mo>&#x02211;</mo><mrow><mi>i</mi><mo>&#x0003D;</mo><mn>1</mn></mrow><mrow><mn>25</mn></mrow></msubsup><msub><mi>r</mi><mrow><mi>n</mi><mo>&#x0002B;</mo><mi>i</mi></mrow></msub><mspace width="0.167em" /><msubsup><mi>r</mi><mrow><mi>n</mi><mo>&#x0002B;</mo><mi>i</mi><mo>&#x02212;</mo><mn>1</mn></mrow><mo>&#x0002A;</mo></msubsup><msup><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><msub><mi>s</mi><mi>i</mi></msub><mspace width="0.167em" /><msubsup><mi>s</mi><mrow><mi>i</mi><mo>&#x02212;</mo><mn>1</mn></mrow><mo>&#x0002A;</mo></msubsup><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow><mo>&#x0002A;</mo></msup><mo stretchy="true" fence="true" form="postfix">&#x0007C;</mo></mrow></mrow></math></div><!-- /eq -->
+            <p class="caption">y(k): matched filter output at symbol k, y(k − ½) between symbols; s<sub>i</sub>: the π/2-BPSK SOF symbols. The correlation peaks when n is the start of a frame.</p>
+          </div>
+        </article>
+
+        <article id="s2-rx3" class="learn">
+          <h3>3. Carrier recovery and PL descrambling</h3>
+          <p>Doppler and LNB drift leave a frequency offset, and oscillator phase noise rotates the constellation. The known PLHEADER and pilot symbols reveal the offset and phase, which are corrected before decoding. PL descrambling multiplies by the conjugate of the scrambling sequence. Move the phase error and see the constellation rotate until the pilots correct it.</p>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <label for="s2-esn0">Es/N₀ <output id="s2-esn0-out"></output><input type="range" id="s2-esn0" min="-3" max="20" step="0.5" value="12" data-unit="dB"></label>
+              <label for="s2-phase">Phase error <output id="s2-phase-out"></output><input type="range" id="s2-phase" min="0" max="45" step="1" value="15" data-unit="°"></label>
+              <label class="check"><input type="checkbox" id="s2-correct"> Correct the phase with the pilots</label>
+              <div id="s2-rx-readout"></div>
+            </div>
+            <div class="learn-plots">
+              <div id="s2-rx-constellation" class="chart constellation"></div>
+            </div>
+          </div>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:s2-phase --><div class="eq"><math display="block"><mrow><mover accent="true"><mrow><mi>&#x003C6;</mi></mrow><mo>&#x0005E;</mo></mover><mo>&#x0003D;</mo><mo>arg</mo><munder><mo>&#x02211;</mo><mi>k</mi></munder><msub><mi>r</mi><mi>k</mi></msub><mspace width="0.167em" /><msubsup><mi>p</mi><mi>k</mi><mo>&#x0002A;</mo></msubsup><mo>&#x0002C;</mo><mspace width="1em" /><msubsup><mi>r</mi><mi>k</mi><mi>&#x02032;</mi></msubsup><mo>&#x0003D;</mo><msub><mi>r</mi><mi>k</mi></msub><mspace width="0.167em" /><msup><mi>e</mi><mrow><mo>&#x02212;</mo><mi>j</mi><mover accent="true"><mrow><mi>&#x003C6;</mi></mrow><mo>&#x0005E;</mo></mover></mrow></msup></mrow></math></div><!-- /eq -->
+            <!-- eq:s2-descramble --><div class="eq"><math display="block"><mrow><msub><mi>s</mi><mi>k</mi></msub><mo>&#x0003D;</mo><msubsup><mi>r</mi><mi>k</mi><mi>&#x02032;</mi></msubsup><mspace width="0.167em" /><msup><mi>C</mi><mo>&#x0002A;</mo></msup><mo stretchy="false">&#x00028;</mo><mi>k</mi><mo stretchy="false">&#x00029;</mo></mrow></math></div><!-- /eq -->
+            <p class="caption">r<sub>k</sub>: received pilot or header symbols; p<sub>k</sub>: their known values. The estimate averages out the noise over the 36 pilots of a block. C: the PL scrambling sequence.</p>
+          </div>
+        </article>
+
+        <article id="s2-rx4" class="learn">
+          <h3>4. Soft demapping and bit deinterleaving</h3>
+          <p>Instead of deciding each bit as 0 or 1, the demapper computes how likely each value is: a log-likelihood ratio (LLR), positive when 0 is more likely, with a magnitude showing the confidence. Points close to a decision boundary give small LLRs. The LLRs are deinterleaved back into codeword order for the LDPC decoder.</p>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <label for="s2-llr-bit">Bit<select id="s2-llr-bit"></select></label>
+              <label for="s2-llr-esn0">Es/N₀ <output id="s2-llr-esn0-out"></output><input type="range" id="s2-llr-esn0" min="0" max="20" step="0.5" value="8" data-unit="dB"></label>
+              <div id="s2-llr-readout"></div>
+            </div>
+            <div class="learn-plots">
+              <div id="s2-llr-map" class="chart constellation"></div>
+            </div>
+          </div>
+          <p class="hint">Each square is a possible received point, coloured by the LLR of the chosen bit for the selected MODCOD: blue where 0 is more likely, orange where 1 is, paler near the boundary, where the LLR is small and the decoder trusts the bit less. A higher Es/N₀ makes the same distance more convincing, so the colours sharpen.</p>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:s2-llr --><div class="eq"><math display="block"><mrow><mi>L</mi><mo stretchy="false">&#x00028;</mo><msub><mi>b</mi><mi>k</mi></msub><mo stretchy="false">&#x00029;</mo><mo>&#x0003D;</mo><mi>ln</mi><mspace width="0.167em" /><mfrac><mrow><msub><mo>&#x02211;</mo><mrow><mi>s</mi><mo>&#x02208;</mo><msubsup><mi>S</mi><mi>k</mi><mn>0</mn></msubsup></mrow></msub><msup><mi>e</mi><mrow><mo>&#x02212;</mo><mo stretchy="false">&#x0007C;</mo><mi>r</mi><mo>&#x02212;</mo><mi>s</mi><msup><mo stretchy="false">&#x0007C;</mo><mn>2</mn></msup><mo>&#x0002F;</mo><msub><mi>N</mi><mn>0</mn></msub></mrow></msup></mrow><mrow><msub><mo>&#x02211;</mo><mrow><mi>s</mi><mo>&#x02208;</mo><msubsup><mi>S</mi><mi>k</mi><mn>1</mn></msubsup></mrow></msub><msup><mi>e</mi><mrow><mo>&#x02212;</mo><mo stretchy="false">&#x0007C;</mo><mi>r</mi><mo>&#x02212;</mo><mi>s</mi><msup><mo stretchy="false">&#x0007C;</mo><mn>2</mn></msup><mo>&#x0002F;</mo><msub><mi>N</mi><mn>0</mn></msub></mrow></msup></mrow></mfrac></mrow></math></div><!-- /eq -->
+            <p class="caption">S<sub>k</sub><sup>0</sup>, S<sub>k</sub><sup>1</sup>: constellation points whose bit k is 0 or 1; r: corrected received symbol; N<sub>0</sub>: noise density. Receivers often keep only the largest term of each sum (max-log approximation).</p>
+          </div>
+        </article>
+
+        <article id="s2-rx5" class="learn">
+          <h3>5. LDPC and BCH decoding</h3>
+          <p>The LDPC decoder passes messages between the bit nodes and the check nodes of its sparse parity check matrix, refining the LLRs each iteration, typically up to 50 iterations, until every parity check is satisfied. The BCH decoder then corrects the up to t residual bit errors. Table 13's Es/N₀ values are the levels at which this chain reaches quasi error free operation.</p>
+          <div id="s2-tanner" class="chart"></div>
+          <p class="hint">A Tanner graph: each check (square) joins the bits (circles) its row of H adds up, and messages travel along the edges. This toy code has 12 bits; DVB-S2 has 64 800 or 16 200, each in 2 to 13 checks.</p>
+          <h4>Watch a decoder work</h4>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <label for="s2-ldpc-ebn0">Eb/N₀ <output id="s2-ldpc-ebn0-out"></output><input type="range" id="s2-ldpc-ebn0" min="0" max="6" step="0.25" value="2.5" data-unit="dB"></label>
+              <div id="s2-ldpc-readout"></div>
+            </div>
+            <div class="learn-plots">
+              <div id="s2-ldpc" class="chart"></div>
+            </div>
+          </div>
+          <p class="hint">A real min-sum decoder on a small rate-1/2 LDPC code (480 bits, each in 3 checks of 6 bits), 40 codewords sent in BPSK over noise. Each line is one codeword's bit errors after each iteration. As Eb/N₀ rises the errors fall to zero within a few iterations, the "waterfall" that table 13's thresholds describe. Being much shorter than 64 800 bits, this code needs more Eb/N₀ than DVB-S2's.</p>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:s2-parity --><div class="eq"><math display="block"><mrow><mi>H</mi><msup><mi>c</mi><mi>T</mi></msup><mo>&#x0003D;</mo><mn>0</mn></mrow></math></div><!-- /eq -->
+            <!-- eq:s2-minsum --><div class="eq"><math display="block"><mrow><msub><mi>m</mi><mrow><mi>j</mi><mo>&#x02192;</mo><mi>i</mi></mrow></msub><mo>&#x0003D;</mo><munder><mo>&#x0220F;</mo><mrow><msup><mi>i</mi><mi>&#x02032;</mi></msup><mo>&#x02260;</mo><mi>i</mi></mrow></munder><mo>sign</mo><mo stretchy="false">&#x00028;</mo><msub><mi>L</mi><mrow><msup><mi>i</mi><mi>&#x02032;</mi></msup></mrow></msub><mo stretchy="false">&#x00029;</mo><mo>&#x000B7;</mo><msub><mo>min</mo><mrow><msup><mi>i</mi><mi>&#x02032;</mi></msup><mo>&#x02260;</mo><mi>i</mi></mrow></msub><mo stretchy="false">&#x0007C;</mo><msub><mi>L</mi><mrow><msup><mi>i</mi><mi>&#x02032;</mi></msup></mrow></msub><mo stretchy="false">&#x0007C;</mo><mo>&#x0002C;</mo><mspace width="1em" /><msub><mi>L</mi><mi>i</mi></msub><mo>&#x0003D;</mo><msubsup><mi>L</mi><mi>i</mi><mrow><mi>c</mi><mi>h</mi></mrow></msubsup><mo>&#x0002B;</mo><munder><mo>&#x02211;</mo><mi>j</mi></munder><msub><mi>m</mi><mrow><mi>j</mi><mo>&#x02192;</mo><mi>i</mi></mrow></msub></mrow></math></div><!-- /eq -->
+            <p class="caption">H: LDPC parity check matrix; c: codeword. Min-sum check node update: the message from check j to bit i uses the other bits of the check; the bit's new LLR adds its channel LLR to all its incoming check messages.</p>
+          </div>
+        </article>
+
+        <article id="s2-rx6" class="learn">
+          <h3>6. Stream recovery</h3>
+          <p>The BB descrambler removes the PRBS, and the BBHEADER is checked with its CRC-8 and read: DFL gives the DATA FIELD length, SYNCD where the first packet starts, UPL the packet length. Each packet's CRC-8 is checked and the sync byte restored, deleted null packets are re-inserted at their original places, and the transport stream leaves the receiver for the decoder.</p>
+          <div id="s2-stream" class="chart"></div>
+          <p class="hint">Three consecutive DATA FIELDs of the selected mode. Packets (188 bytes) do not fit a whole number of times, so each frame starts with the end of the previous frame's last packet (orange); SYNCD tells the receiver where the first new packet, marked by its CRC-8, begins.</p>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:s2-esn0 --><div class="eq"><math display="block"><mrow><mfrac><mrow><msub><mi>E</mi><mi>s</mi></msub></mrow><mrow><msub><mi>N</mi><mn>0</mn></msub></mrow></mfrac><mo>&#x0003D;</mo><mfrac><mrow><mi>C</mi></mrow><mrow><msub><mi>N</mi><mn>0</mn></msub></mrow></mfrac><mo>&#x02212;</mo><mn>10</mn><msub><mi>log</mi><mrow><mn>10</mn></mrow></msub><mspace width="0.167em" /><msub><mi>R</mi><mi>s</mi></msub><mo>&#x0002C;</mo><mspace width="1em" /><mfrac><mrow><msub><mi>E</mi><mi>b</mi></msub></mrow><mrow><msub><mi>N</mi><mn>0</mn></msub></mrow></mfrac><mo>&#x0003D;</mo><mfrac><mrow><msub><mi>E</mi><mi>s</mi></msub></mrow><mrow><msub><mi>N</mi><mn>0</mn></msub></mrow></mfrac><mo>&#x02212;</mo><mn>10</mn><msub><mi>log</mi><mrow><mn>10</mn></mrow></msub><mspace width="0.167em" /><mi>&#x003B7;</mi></mrow></math></div><!-- /eq -->
+            <p class="caption">The link works when the received Es/N₀ exceeds the MODCOD's required value with margin; see below.</p>
+          </div>
+        </article>
+
+        <h2 class="subhead">MODCODs and the link budget</h2>
+
+        <article id="s2-modcods" class="learn">
+          <h3>Choosing a MODCOD</h3>
+          <p>Every MODCOD trades robustness for capacity. With adaptive coding (ACM) a link changes MODCOD frame by frame as rain fades come and go. Enter the Es/N₀ your link budget gives and a margin to see the most efficient MODCOD that still works. The curve is the Shannon limit, the most any code could carry.</p>
+          <div class="learn-grid">
+            <div class="learn-controls">
+              <label for="s2-link-esn0">Available Es/N₀<div class="input-unit"><input id="s2-link-esn0" inputmode="decimal" value="10"><span>dB</span></div></label>
+              <label for="s2-margin">Margin<div class="input-unit"><input id="s2-margin" inputmode="decimal" value="1"><span>dB</span></div></label>
+              <button type="button" id="s2-from-budget">Use the Link Budget's C/N₀</button>
+              <p id="s2-from-budget-note" class="hint"></p>
+              <div id="s2-acm"></div>
+            </div>
+            <div class="learn-plots">
+              <div id="s2-modcod-chart" class="chart"></div>
+            </div>
+          </div>
+          <div id="s2-modcod-table" class="table-wrap"></div>
+          <div class="formulas">
+            <h4>Formulas</h4>
+            <!-- eq:s2-efficiency --><div class="eq"><math display="block"><mrow><mi>&#x003B7;</mi><mo>&#x0003D;</mo><mfrac><mrow><msub><mi>K</mi><mrow><mi>b</mi><mi>c</mi><mi>h</mi></mrow></msub><mo>&#x02212;</mo><mn>80</mn></mrow><mrow><msub><mi>N</mi><mrow><mi>P</mi><mi>L</mi></mrow></msub></mrow></mfrac></mrow></math></div><!-- /eq -->
+            <!-- eq:s2-shannon --><div class="eq"><math display="block"><mrow><mi>&#x003B7;</mi><mo>&#x02264;</mo><msub><mi>log</mi><mn>2</mn></msub><mrow><mo stretchy="true" fence="true" form="prefix">&#x00028;</mo><mn>1</mn><mo>&#x0002B;</mo><mfrac><mrow><msub><mi>E</mi><mi>s</mi></msub></mrow><mrow><msub><mi>N</mi><mn>0</mn></msub></mrow></mfrac><mo stretchy="true" fence="true" form="postfix">&#x00029;</mo></mrow></mrow></math></div><!-- /eq -->
+            <p class="caption">Required Es/N₀: table 13, normal FECFRAME, QEF over AWGN with ideal synchronization. Short frames need about 0.2 to 0.3 dB more, and real channels add implementation losses.</p>
           </div>
         </article>
       </section>

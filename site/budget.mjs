@@ -677,6 +677,13 @@ function dataLinkHtml() {
   return table([t('Item'), t('Result')], rows);
 }
 
+/** C/N₀ (dB-Hz) of the last calculated link, or null without one or with invalid noise inputs. */
+export function currentCn0() {
+  if (!snapshot) return null;
+  const d = dataLink(snapshot.values, number(snapshot.noiseFigure), NaN, NaN, 0, antennaTemp());
+  return d && Number.isFinite(d.cn0) ? d.cn0 : null;
+}
+
 let chartCursorAt = null;
 
 /** Redraws the chart; the slider returns to the link distance only when resetSlider is true. */

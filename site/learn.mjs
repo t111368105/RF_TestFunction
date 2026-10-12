@@ -32,7 +32,7 @@ const PAD = { left: 52, right: 14, top: 14, bottom: 38 };
  * An SVG plot. series: [{ points, color, width, dash, opacity }] lines; stems: [{ points, color }]
  * vertical bars from y = 0; dots: [{ points, color, r }]. x and y are [min, max].
  */
-function plot({ label, width = 640, height = 250, x, y, xTicks, yTicks, xLabel, yLabel, series = [], stems = [], dots = [], xFormat = (v) => fmt(v, 3), yFormat = (v) => fmt(v, 2) }) {
+export function plot({ label, width = 640, height = 250, x, y, xTicks, yTicks, xLabel, yLabel, series = [], stems = [], dots = [], xFormat = (v) => fmt(v, 3), yFormat = (v) => fmt(v, 2) }) {
   const L = PAD.left;
   const R = width - PAD.right;
   const T = PAD.top;
@@ -73,12 +73,12 @@ function plot({ label, width = 640, height = 250, x, y, xTicks, yTicks, xLabel, 
 let plots = 0;
 
 /** Evenly spaced ticks from a to b in steps of step. */
-const ticks = (a, b, step) => Array.from({ length: Math.floor((b - a) / step + 1e-9) + 1 }, (_, i) => a + i * step);
+export const ticks = (a, b, step) => Array.from({ length: Math.floor((b - a) / step + 1e-9) + 1 }, (_, i) => a + i * step);
 
 const value = (id) => Number($(id).value);
 
 /** Shows each range input's value in its <output>, with the unit in data-unit. */
-function showOutputs(root) {
+export function showOutputs(root) {
   for (const input of root.querySelectorAll('input[type=range]')) {
     const out = $(input.id + '-out');
     if (out) out.textContent = `${fmt(Number(input.value), 3)}${input.dataset.unit ? ' ' + input.dataset.unit : ''}`;
