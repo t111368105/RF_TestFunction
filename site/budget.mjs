@@ -629,18 +629,18 @@ function updateAnalysis() {
     ? table(
         [t('Item'), t('Result'), t('Formula')],
         [
-          [t('System noise temperature'), `${fmt(n.tsys, 1)} K`, eq('tsys')],
+          [`${t('System noise temperature')} T<sub>sys</sub>`, `${fmt(n.tsys, 1)} K`, eq('tsys')],
           [
-            t('Antenna noise kTₐB'),
+            t('Antenna noise N<sub>a</sub> (kT<sub>a</sub>B)'),
             antennaTemp() > 0 ? `${fmt(noisePower(antennaTemp(), bandwidth))} dBm (${fmt(antennaTemp(), 1)} K)` : '—',
             eq('antenna'),
           ],
-          [t('Input-referred noise'), fmt(n.floor) + ' dBm', eq('floor')],
+          [`${t('Input-referred noise')} N`, fmt(n.floor) + ' dBm', eq('floor')],
           [t('Estimated SNR'), fmt(n.snr) + ' dB', eq('snr')],
-          [t('SNR margin'), fmt(n.margin) + ' dB', eq('margin')],
+          [`${t('SNR margin')} M`, fmt(n.margin) + ' dB', eq('margin')],
           [t('Verdict'), n.margin >= 0 ? t('SNR target met') : t('SNR target not met'), eq('verdict')],
           [
-            t('Equivalent receiver sensitivity'),
+            `${t('Equivalent receiver sensitivity')} S`,
             snapshot.sensitivityFromSnr
               ? t('{value} dBm (used as the receiver sensitivity)', { value: fmt(n.sensitivity) })
               : t('{value} dBm (entered {entered} dBm, difference {difference} dB)', {

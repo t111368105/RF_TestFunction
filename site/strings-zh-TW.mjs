@@ -1124,4 +1124,5 @@ export const ZH_TW = {
   "Enter an elevation angle between 5° and 90° in the shared conditions.": "請在共用條件輸入 5° 到 90° 的仰角。",
   "Elevation {elevation}°: {share} % of the ITU-R S.465 pattern looks at the ground, × {ground} K ground = {value} K. The pattern follows the sidelobe peaks, so this is an upper bound; a good dish usually picks up less.": "仰角 {elevation}°：ITU-R S.465 場型有 {share} % 的權重落在地面，× 地面 {ground} K = {value} K。此場型取旁波瓣峰值，所以是上限；品質好的碟形天線通常收到更少。",
   "Formula": "公式",
+  "Antenna noise N<sub>a</sub> (kT<sub>a</sub>B)": "天線雜訊 N<sub>a</sub>（kT<sub>a</sub>B）",
 };
