@@ -592,6 +592,7 @@ function showNoiseParts() {
   $('amp-nf').closest('label').hidden = !fromParts;
   $('rx-nf').closest('label').hidden = !fromParts;
   $('noiseFigure').readOnly = fromParts;
+  $('nf-formulas').hidden = !fromParts;
 }
 
 function updateNoiseFigure() {

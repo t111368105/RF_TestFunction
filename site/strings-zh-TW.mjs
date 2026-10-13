@@ -1125,4 +1125,5 @@ export const ZH_TW = {
   "Elevation {elevation}°: {share} % of the ITU-R S.465 pattern looks at the ground, × {ground} K ground = {value} K. The pattern follows the sidelobe peaks, so this is an upper bound; a good dish usually picks up less.": "仰角 {elevation}°：ITU-R S.465 場型有 {share} % 的權重落在地面，× 地面 {ground} K = {value} K。此場型取旁波瓣峰值，所以是上限；品質好的碟形天線通常收到更少。",
   "Formula": "公式",
   "Antenna noise N<sub>a</sub> (kT<sub>a</sub>B)": "天線雜訊 N<sub>a</sub>（kT<sub>a</sub>B）",
+  "Stages in order: 1 the RX cable, 2 the amplifier, 3 the receiver; with the amplifier at the antenna (masthead LNA) the amplifier is stage 1 and the cable stage 2. NF<sub>x</sub>, g<sub>x</sub>: each stage's noise figure and gain in dB. A passive cable at 290 K has F equal to its loss. With 0 dB amplifier gain there is no amplifier, and its stage drops out. Each stage's noise is divided by the gain in front of it, so the first stage matters most.": "依序：1 RX 纜線、2 放大器、3 接收機；放大器裝在天線端（天線端 LNA）時，放大器是第 1 級、纜線是第 2 級。NF<sub>x</sub>、g<sub>x</sub>：各級的雜訊指數與增益（dB）。290 K 的被動纜線，F 等於它的損耗。放大器增益為 0 dB 時代表沒有放大器，該級不計入。每一級的雜訊會除以它前面的總增益，所以第一級影響最大。",
 };

@@ -30,6 +30,8 @@ FORMULAS = {
     # Noise and data rate
     "noise-ktb": r"N = k\, T_{\text{sys}}\, B \quad \text{W}",
     "noise-floor": r"N = {-173.975} + 10 \log_{10} \frac{T_{\text{sys}}}{290\,\text{K}} + 10 \log_{10} B \quad \text{dBm}",
+    "nf-friis": r"F = F_1 + \frac{F_2 - 1}{G_1} + \frac{F_3 - 1}{G_1 G_2}, \quad \text{NF} = 10 \log_{10} F",
+    "nf-terms": r"F_x = 10^{\text{NF}_x/10}, \quad G_x = 10^{g_x/10}, \quad F_{\text{cable}} = \frac{1}{G_{\text{cable}}} = 10^{L_{\text{cable}}/10}",
     "noise-tsys": r"T_{\text{sys}} = T_a + 290\,\text{K} \cdot (F - 1), \quad F = 10^{\text{NF}/10}",
     "noise-snr": r"\text{SNR} = C - N",
     "noise-antenna": r"N_a = {-173.975} + 10 \log_{10} \frac{T_a}{290\,\text{K}} + 10 \log_{10} B \quad \text{dBm}",
