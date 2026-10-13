@@ -1,6 +1,7 @@
 // SVG chart of receiver input power versus distance on a logarithmic distance axis.
 
-import { budget, powerAt, fittedPower } from './calculations.mjs';
+import { budget, fittedPower } from './calculations.mjs';
+import { linkAt, maxDistance as farthest } from './link-model.mjs';
 import { fmt } from './ui.mjs';
 import { t } from './i18n.mjs';
 
@@ -11,21 +12,31 @@ const HEIGHT = 230;
 const SAMPLES = 80;
 
 /**
- * Returns the chart markup and its log10(km) range for the distance slider. measured holds
+ * Returns the chart markup and its log10(km) range for the distance slider, for a snapshot s. The
+ * curve recalculates the estimated losses at each distance (link-model.mjs). measured holds
  * measurement points [km, dBm] and an optional log-distance fit, both drawn when present.
  */
-export function distanceChart(v, measured = { points: [], fit: null }) {
+export function distanceChart(s, measured = { points: [], fit: null }) {
+  const v = s.values;
   const r = budget(v);
+  const maxDistance = farthest(s);
+  const powerAt = (km) => {
+    try {
+      return linkAt(s, km).output;
+    } catch {
+      return NaN;
+    }
+  };
   const center = Math.log10(v[1]);
-  const target = r.maxDistance ? Math.log10(r.maxDistance) : center;
+  const target = maxDistance ? Math.log10(maxDistance) : center;
   const logs = measured.points.map(([d]) => Math.log10(d));
   const lo = Math.max(-150, Math.min(center - 1, target - 0.2, ...logs.map((l) => l - 0.1)));
   const hi = Math.min(150, Math.max(center + 1, target + 0.2, ...logs.map((l) => l + 0.1)));
 
   const points = Array.from({ length: SAMPLES + 1 }, (_, i) => {
     const log = lo + ((hi - lo) * i) / SAMPLES;
-    return [log, powerAt(v, 10 ** log)];
-  });
+    return [log, powerAt(10 ** log)];
+  }).filter(([, p]) => Number.isFinite(p));
   const sensitivity = v[8];
   const required = v[8] + v[9];
   const ys = [...points.map((p) => p[1]), sensitivity, required, ...measured.points.map(([, p]) => p)];
@@ -65,7 +76,7 @@ export function distanceChart(v, measured = { points: [], fit: null }) {
     `<polyline points="${points.map((p) => `${x(p[0])},${y(p[1])}`).join(' ')}" fill="none" stroke="var(--blue)" stroke-width="3"/>` +
     measuredSvg(measured, v[1], lo, hi, x, y) +
     marker(center, t('Link distance'), 32) +
-    (r.maxDistance && Math.log10(r.maxDistance) <= hi ? marker(Math.log10(r.maxDistance), t('Max distance'), 48) : '') +
+    (maxDistance && Math.log10(maxDistance) <= hi ? marker(Math.log10(maxDistance), t('Max distance'), 48) : '') +
     // Moved by cursorAt() as the distance slider changes.
     `<g id="chart-cursor" class="chart-cursor"><line x1="0" x2="0" y1="${BOTTOM - HEIGHT}" y2="${BOTTOM}"/><circle r="6"/></g>` +
     `<text x="70" y="22">${t('Receiver input (dBm)')}</text>` +
@@ -76,9 +87,12 @@ export function distanceChart(v, measured = { points: [], fit: null }) {
     lo,
     hi,
     center,
-    maxDistance: r.maxDistance,
-    /** SVG position of the predicted curve at log10(distance km). */
-    cursorAt: (log) => ({ x: x(log), y: y(powerAt(v, 10 ** log)) }),
+    maxDistance,
+    /** SVG position of the predicted curve at log10(distance km), and the power there. */
+    cursorAt: (log) => {
+      const power = powerAt(10 ** log);
+      return { x: x(log), y: y(Number.isFinite(power) ? power : ymin), power };
+    },
   };
 
   function marker(log, label, labelY) {

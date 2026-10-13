@@ -3,7 +3,8 @@
 import { t } from './i18n.mjs';
 
 const SPEED_OF_LIGHT = 299792458; // m/s
-const FSPL_CONSTANT = 32.44; // dB, for MHz and km
+// 20 log10(4π · 10⁶ Hz · 10³ m / c) = 32.4478 dB, for MHz and km. (The Swift original rounded it to 32.44.)
+const FSPL_CONSTANT = 20 * Math.log10((4 * Math.PI * 1e9) / SPEED_OF_LIGHT);
 const THERMAL_NOISE_290K = -173.975; // dBm/Hz
 const T0 = 290; // K, the reference temperature for noise figures
 /** dBd + DBD_TO_DBI = dBi: a half-wave dipole has 2.15 dBi. */
@@ -28,6 +29,9 @@ const POSITIVE = [0, 1];
 const NON_NEGATIVE = [6, 7, 9, 10];
 // Free-space loss is only valid in the far field; below this many wavelengths results are flagged.
 const FAR_FIELD_WAVELENGTHS = 10;
+// A high-gain antenna's far field starts at 2D²/λ; its aperture D follows from the gain, G = η (πD/λ)²,
+// with this typical aperture efficiency.
+const APERTURE_EFFICIENCY = 0.55;
 
 /** Index of the first link value that fails validation, or -1. */
 export function invalidIndex(values) {
@@ -89,7 +93,13 @@ export function budget(v, { ampFirst = false } = {}) {
   // Distance at which the margin exactly equals the required margin (20 dB per decade).
   const maxDistance = 10 ** (Math.log10(d) + (margin - m) / 20);
   const wavelength = SPEED_OF_LIGHT / (f * 1e6) / 1000; // km
-  const farFieldMin = FAR_FIELD_WAVELENGTHS * wavelength;
+  // The far field starts at 10 wavelengths, or at 2D²/λ of the larger antenna when that is farther.
+  const antennas = [tg, r].map((gain) => {
+    const diameter = (wavelength / Math.PI) * Math.sqrt(10 ** (gain / 10) / APERTURE_EFFICIENCY); // km
+    return { gain, diameter, farField: (2 * diameter ** 2) / wavelength };
+  });
+  const largest = antennas[1].farField > antennas[0].farField ? antennas[1] : antennas[0];
+  const farFieldMin = Math.max(FAR_FIELD_WAVELENGTHS * wavelength, largest.farField);
   return {
     fspl,
     received,
@@ -99,6 +109,8 @@ export function budget(v, { ampFirst = false } = {}) {
     maxDistance: Number.isFinite(maxDistance) && maxDistance > 0 ? maxDistance : null,
     meets: margin >= m,
     farFieldMin,
+    // The antenna whose size sets the far-field limit, or null when 10 wavelengths does.
+    farFieldAntenna: largest.farField > FAR_FIELD_WAVELENGTHS * wavelength ? { gain: largest.gain, diameter: largest.diameter } : null,
     nearField: d < farFieldMin,
     status:
       margin < 0 ? t('Below receiver sensitivity') : margin < m ? t('Margin target not met') : t('Margin target met'),

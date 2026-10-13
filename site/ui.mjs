@@ -14,6 +14,12 @@ export function fmt(x, digits = 2) {
   return x.toLocaleString('en-US', { maximumFractionDigits: digits });
 }
 
+/** A distance given in km, shown in metres below 1 km so short ranges stay readable. */
+export function fmtDistance(km, digits = 6) {
+  if (km == null || !Number.isFinite(km)) return fmt(km);
+  return km < 1 ? `${fmt(km * 1000, digits)} m` : `${fmt(km, digits)} km`;
+}
+
 /** Random id; randomUUID only exists in secure contexts (https or localhost), not plain-http LAN hosts. */
 export function newId() {
   if (crypto.randomUUID) return crypto.randomUUID();

@@ -2,7 +2,8 @@
 // pure helpers that the page and the report share for a calculated link (a snapshot or saved plan).
 
 import { labels, number, budget, noise, dataLink, inputWarnings } from './calculations.mjs';
-import { esc, fmt, fmtRate, table } from './ui.mjs';
+import { esc, fmt, fmtDistance, fmtRate, table } from './ui.mjs';
+import { maxDistance, enteredValues } from './link-model.mjs';
 import { prepareMeasurements, measurementSummary, fitRows } from './measurements.mjs';
 import { describeEstimate } from './estimator.mjs';
 import { describeLossCalc } from './loss-calculators.mjs';
@@ -120,7 +121,7 @@ export function reportHtml(p, assumptions) {
   );
   const noiseValue = (key, digits) => (n ? fmt(n[key], digits) : t('Invalid input'));
   const eirp = eirpCheck(p, r);
-  const warnings = inputWarnings(p.values);
+  const warnings = inputWarnings(enteredValues(p));
   if (eirp?.exceeded) warnings.push(eirpWarning(eirp));
   if (p.atmosphereStale) warnings.push(STALE_ESTIMATE);
   if (r.nearField) warnings.push(t('The distance is in the near field; free-space results are unreliable.'));
@@ -138,7 +139,7 @@ export function reportHtml(p, assumptions) {
       ],
       ['FSPL', fmt(r.fspl) + ' dB'],
       [t('Link margin'), fmt(r.margin) + ' dB'],
-      [t('Maximum distance'), fmt(r.maxDistance, 7) + ' km'],
+      [t('Maximum distance'), maxDistance(p) === null ? t('Not reached') : fmtDistance(maxDistance(p), 7)],
     ],
   );
   const stages = table(

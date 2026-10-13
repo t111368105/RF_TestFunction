@@ -41,6 +41,15 @@ export function knifeEdgeLoss(nu) {
   return 6.9 + 20 * Math.log10(Math.sqrt((nu - 0.1) ** 2 + 1) + nu - 0.1);
 }
 
+/**
+ * Radio horizon (km) of two antennas h1 and h2 m above a smooth Earth with effective-radius factor k:
+ * the farthest distance at which they still see each other, √(2kR) (√h1 + √h2); 4.12 (√h1 + √h2)
+ * for k = 4/3.
+ */
+export function radioHorizon(h1, h2, k = 4 / 3) {
+  return Math.sqrt(2 * k * EARTH_RADIUS) * (Math.sqrt(h1 / 1000) + Math.sqrt(h2 / 1000));
+}
+
 /** Height (m) the Earth's bulge adds at d1 and d2 km from the ends, for an effective-radius factor k. */
 export function earthBulge(d1, d2, k) {
   return (d1 * d2 * 1000) / (2 * k * EARTH_RADIUS);

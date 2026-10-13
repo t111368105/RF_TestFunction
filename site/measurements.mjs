@@ -1,7 +1,8 @@
 // Measured vs. Predicted: a table of (distance, measured receiver input) points, compared with the
 // prediction and fitted with a log-distance path-loss model.
 
-import { number, budget, powerAt, fitPathLoss, fittedPower, fittedMaxDistance } from './calculations.mjs';
+import { number, budget, fitPathLoss, fittedPower, fittedMaxDistance } from './calculations.mjs';
+import { linkAt } from './link-model.mjs';
 import { $, esc, fmt, notice, table, signButton } from './ui.mjs';
 import { t } from './i18n.mjs';
 
@@ -32,7 +33,13 @@ export function measurementSummary(s) {
     const km = number(d) * scale;
     const dbm = number(p);
     const valid = !blank && Number.isFinite(km) && km > 0 && Number.isFinite(dbm);
-    const predicted = valid ? powerAt(v, km) : NaN;
+    // The prediction recalculates the estimated losses for the measurement's distance.
+    let predicted = NaN;
+    try {
+      if (valid) predicted = linkAt(s, km).output;
+    } catch {
+      // Out of the calculation range: no prediction.
+    }
     return { d: km, p: dbm, blank, valid, predicted, delta: dbm - predicted };
   });
   const used = rows.filter((r) => r.valid && Number.isFinite(r.delta));

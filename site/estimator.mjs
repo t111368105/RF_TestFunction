@@ -219,26 +219,31 @@ function describeItem(key, r) {
   }
   if (key === 'cloud') {
     return t('ITU-R P.840: L {L} kg/m² exceeded {percent} % of the time, {frequency} GHz, elevation {elevation}° → {value} dB.', {
-      L: fmt(i.cloudWater, 4),
-      percent: fmt(i.percent, 4),
+      L: fmt(r.L ?? i.cloudWater, 4),
+      percent: fmt(r.percent ?? i.percent, 4),
       frequency: f,
       elevation: fmt(i.elevation),
       value: r.value,
     });
   }
   if (key === 'tropo-scintillation') {
+    const common = {
+      nwet: fmt(i.nWet, 1),
+      antenna: i.dish
+        ? t('antenna {diameter} m, efficiency {efficiency}', { diameter: fmt(i.dish, 3), efficiency: fmt(i.efficiency, 3) })
+        : t('no aperture averaging'),
+      percent: fmt(i.percent, 4),
+      frequency: f,
+      elevation: fmt(i.elevation),
+      value: r.value,
+    };
+    // Plans saved before the P.618 §2.5 combination hold the scintillation alone.
+    if (r.alone === undefined) {
+      return t('ITU-R P.618: N<sub>wet</sub> {nwet}, {antenna}, exceeded {percent} % of the time, {frequency} GHz, elevation {elevation}° → {value} dB.', common);
+    }
     return t(
-      'ITU-R P.618: N<sub>wet</sub> {nwet}, {antenna}, exceeded {percent} % of the time, {frequency} GHz, elevation {elevation}° → {value} dB.',
-      {
-        nwet: fmt(i.nWet, 1),
-        antenna: i.dish
-          ? t('antenna {diameter} m, efficiency {efficiency}', { diameter: fmt(i.dish, 3), efficiency: fmt(i.efficiency, 3) })
-          : t('no aperture averaging'),
-        percent: fmt(i.percent, 4),
-        frequency: f,
-        elevation: fmt(i.elevation),
-        value: r.value,
-      },
+      'ITU-R P.618: N<sub>wet</sub> {nwet}, {antenna}, exceeded {percent} % of the time, {frequency} GHz, elevation {elevation}° → {alone} dB alone; combined with rain {rain} dB and cloud {cloud} dB as √((A<sub>R</sub> + A<sub>C</sub>)² + A<sub>S</sub>²) (P.618 §2.5), it adds {value} dB.',
+      { ...common, alone: fmt(r.alone, 3), rain: fmt(r.rain, 3), cloud: fmt(r.cloud, 3) },
     );
   }
   if (r.belowIonosphere) return t('The far end is below the ionosphere (about 60 km) → 0 dB.');
@@ -360,11 +365,16 @@ function estimateItem(key, i) {
   const inside = rise < INSIDE_ATMOSPHERE;
   if (key === 'cloud') {
     if (!(i.cloudWater >= 0)) return { error: t('Enter a cloud liquid water content of 0 kg/m² or more.') };
-    if (i.percent < 0.1) notes.push(t('The cloud maps start at 0.1 % of the time; enter the cloud liquid water for this percentage yourself.'));
-    // Liquid cloud water lies below the freezing level, taken as spread evenly up to the rain height.
-    const share = Math.min(1, Math.max(0, rise / (i.rainHeight - i.stationAltitude)));
+    const c = cloudPart(f, i, rise);
+    if (i.percent < 1) {
+      notes.push(
+        c.followsTable
+          ? t('Below 1 % of the time, ITU-R P.618 §2.5 combines the rain with the cloud attenuation exceeded 1 % of the time, so L is taken at 1 % ({L} kg/m²).', { L: fmt(c.L, 4) })
+          : t('Below 1 % of the time, ITU-R P.618 §2.5 combines the rain with the cloud attenuation exceeded 1 % of the time; enter L for 1 % for that, as the value entered is used as it is.'),
+      );
+    }
     if (inside) notes.push(insideAtmosphere(rise));
-    return { result: { value: rounded(share * cloudAttenuation(f, i.elevation, i.cloudWater)) }, notes };
+    return { result: { value: rounded(c.value), L: c.L, percent: c.percent }, notes };
   }
   if (key === 'tropo-scintillation') {
     if (!(i.percent > 0)) return { error: t('Enter a positive percentage of time.') };
@@ -374,8 +384,14 @@ function estimateItem(key, i) {
     if (f < 4 || f > 20) notes.push(t('P.618 tropospheric scintillation is specified for 4 to 20 GHz; this is an extrapolation.'));
     if (i.percent < 0.01 || i.percent > 50) notes.push(t('P.618 tropospheric scintillation is specified for 0.01 % to 50 % of the time.'));
     if (inside) notes.push(insideAtmosphere(rise));
-    const fade = tropoScintillation(f, i.elevation, i.percent, i.dish ?? 0, i.efficiency, i.nWet, i.distanceKm * 1000);
-    return { result: { value: rounded(fade) }, notes };
+    const alone = tropoScintillation(f, i.elevation, i.percent, i.dish ?? 0, i.efficiency, i.nWet, i.distanceKm * 1000);
+    // ITU-R P.618 §2.5 adds scintillation to rain and cloud as √((A_R + A_C)² + A_S²), not linearly, so
+    // the field holds its share on top of the rain and cloud fields: their sum is then the P.618 total.
+    const atmosphere = estimateAtmosphere(i);
+    const rain = atmosphere.error ? 0 : atmosphere.rain;
+    const cloud = i.cloudWater >= 0 ? cloudPart(f, i, rise).value : 0;
+    const value = Math.hypot(rain + cloud, alone) - (rain + cloud);
+    return { result: { value: rounded(value), alone, rain, cloud }, notes };
   }
   // The ionosphere starts at about 60 km; a far end below it sees none of it.
   if ((key === 'iono-scintillation' || key === 'iono-absorption') && rise < IONOSPHERE_BASE) {
@@ -401,6 +417,23 @@ function estimateItem(key, i) {
 }
 
 const none = (notes) => ({ result: { value: '0', none: true }, notes });
+
+/**
+ * Cloud attenuation (dB) as ITU-R P.618 §2.5 combines it with rain: exceeded max(p, 1 %) of the time,
+ * with L following the Taipei table to 1 % when it holds the Taipei value. Liquid cloud water lies
+ * below the freezing level, taken as spread evenly up to the rain height, so a path ending below it
+ * (rise km above the station) crosses only part of it.
+ */
+function cloudPart(f, i, rise) {
+  const at = i.percent < 1 ? atPercent(i, 1) : i;
+  const share = Math.min(1, Math.max(0, rise / (i.rainHeight - i.stationAltitude)));
+  return {
+    value: share * cloudAttenuation(f, i.elevation, at.cloudWater),
+    L: at.cloudWater,
+    percent: Math.max(i.percent, 1),
+    followsTable: i.cloudWater === Number(PERCENT_DEPENDENT['atmo-cloud'](i.percent)),
+  };
+}
 
 // Terrain and obstacle items: (f GHz, inputs, notes) → { result, notes } or { error }.
 const TERRAIN = {
@@ -789,6 +822,16 @@ export function atPercent(i, p) {
     cloudWater: follows('atmo-cloud', i.cloudWater) ? Number(PERCENT_DEPENDENT['atmo-cloud'](p)) : i.cloudWater,
     radomeRain: follows('atmo-radome-rain', i.radomeRain) ? Number(PERCENT_DEPENDENT['atmo-radome-rain'](p)) : i.radomeRain,
   };
+}
+
+/**
+ * The terrestrial geometry under the shared conditions, for the radio-horizon check, or null on an
+ * Earth–space path: antenna altitudes and the mean terrain altitude in m (null when blank) and k.
+ */
+export function terrestrialGeometry() {
+  if ($('atmo-path').value !== 'terrestrial') return null;
+  const optional = (id) => ($(id).value.trim() === '' ? null : number($(id).value));
+  return { tx: optional('terr-tx-alt'), rx: optional('terr-rx-alt'), ground: optional('mp-terrain'), k: number($('diff-k').value) };
 }
 
 /** Surface temperature (°C) under the shared conditions, or null. */

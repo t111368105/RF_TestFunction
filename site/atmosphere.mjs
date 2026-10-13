@@ -519,6 +519,9 @@ export function estimateAtmosphere(o) {
   const notes = [];
   if (f > 350) notes.push(t('Above 350 GHz the gas estimate is outside the recommended range.'));
   if (slant && f > 55) notes.push(t('P.618 rain prediction is validated up to 55 GHz.'));
+  // P.530 §2.4.1 gives its rain method for frequencies up to 100 GHz and paths up to 60 km.
+  if (!slant && f > 100) notes.push(t('P.530 rain prediction is valid up to 100 GHz; this is an extrapolation.'));
+  if (!slant && o.distanceKm > 60) notes.push(t('P.530 rain prediction is valid for paths up to 60 km; this is an extrapolation.'));
   const maxPercent = slant ? 5 : 1;
   if (o.percent < 0.001 || o.percent > maxPercent) {
     notes.push(t('The rain model is defined for 0.001 % to {max} % of the time.', { max: maxPercent }));

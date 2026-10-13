@@ -15,11 +15,17 @@
   --orange: #b76305;
   --green: #168249;
   --violet: #7b3fc4;
-  --result-bg: #122b50;
-  --result-ink: #edf5ff;
-  --result-muted: #b9c9df;
-  --result-line: #3b5374;
-  --result-eyebrow: #90baff;
+  /* The result card: a light blue tint in the light theme, to stand out without a dark block. */
+  --result-bg: #e9f1fc;
+  --result-ink: #172a43;
+  --result-muted: #4c5f78;
+  --result-line: #c3d3ea;
+  --result-eyebrow: #225cdd;
+  /* Status badges (target met, warnings), on the result card and on the Learn page. */
+  --status-ok-line: #6ca985;
+  --status-ok-ink: #11683a;
+  --status-warn-line: #d39a52;
+  --status-warn-ink: #8f4a00;
 }
 
 * {
@@ -51,6 +57,10 @@ body {
   --result-muted: #a1a1aa;
   --result-line: #3a3a40;
   --result-eyebrow: #82afff;
+  --status-ok-line: #6ca985;
+  --status-ok-ink: #a0f2c7;
+  --status-warn-line: #ba8b51;
+  --status-warn-ink: #ffd297;
 }
 
 /* ---------- Header and navigation ---------- */
@@ -499,7 +509,7 @@ button:disabled {
 .result {
   background: var(--result-bg);
   color: var(--result-ink);
-  border: 0;
+  border: 1px solid var(--result-line);
   min-height: 240px;
   padding: 30px;
 }
@@ -541,15 +551,15 @@ button:disabled {
 .status {
   display: inline-block;
   padding: 5px 10px;
-  border: 1px solid #6ca985;
+  border: 1px solid var(--status-ok-line);
   border-radius: 6px;
   font-size: 14px;
-  color: #a0f2c7;
+  color: var(--status-ok-ink);
 }
 
 .status.warn {
-  border-color: #ba8b51;
-  color: #ffd297;
+  border-color: var(--status-warn-line);
+  color: var(--status-warn-ink);
 }
 
 .stage {

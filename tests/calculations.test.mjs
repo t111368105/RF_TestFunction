@@ -23,12 +23,14 @@ import {
 // Reference values ported from the original Swift project (Tests/main.swift).
 const base = [2400, 1, 20, 2, 2, 0, 0, 0, -90, 0, 0];
 const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
+// The Swift original used an FSPL constant of 32.44 dB; the exact one is 20 log10(4π · 10⁹ / c).
+const FSPL_SHIFT = 20 * Math.log10((4 * Math.PI * 1e9) / 299792458) - 32.44;
 
 test('Swift reference link budget and stage breakdown', () => {
   const b = budget(base);
-  close(b.fspl, 100.044224834232);
-  close(b.output, -76.044224834232);
-  close(b.margin, 13.955775165768);
+  close(b.fspl, 100.044224834232 + FSPL_SHIFT);
+  close(b.output, -76.044224834232 - FSPL_SHIFT);
+  close(b.margin, 13.955775165768 - FSPL_SHIFT);
 
   const v = [2400, 1, 20, 2, 2, 10, 2, 3, -90, 10, 0];
   const r = budget(v);

@@ -4,8 +4,9 @@
 // by hand stay as they are.
 
 import { budget, number } from './calculations.mjs';
+import { valuesAt } from './link-model.mjs';
 import { slantRange, crossing, ranges } from './satellite.mjs';
-import { reestimate, atPercent } from './estimator.mjs';
+import { atPercent } from './estimator.mjs';
 import { lineChart, moveCursor } from './line-chart.mjs';
 import { linkOptions } from './report.mjs';
 import { $, fmt, table } from './ui.mjs';
@@ -17,25 +18,26 @@ const TIME_ITEMS = ['atmospheric', 'cloud', 'tropo-scintillation', 'radome', 'mu
 const MINUTES_PER_YEAR = 525960;
 
 /** Link margin with the estimated items recalculated by change(inputs) and the distance set to km. */
+// How much the noise floor rises (dB) under changed inputs, or null when it stays as calculated; set
+// by the page when the antenna temperature follows the sky (see showPass).
+let noiseRise = null;
+
 function marginWith(s, change, km = s.values[1]) {
-  const items = s.atmosphereEstimate?.items ?? {};
-  const now = reestimate(s.atmosphereEstimate, change);
-  let delta = 0;
-  for (const [key, r] of Object.entries(items)) {
-    if (now[key] === null) return NaN;
-    delta += now[key] - Number(r.value);
-  }
-  const v = [...s.values];
-  v[1] = km;
-  v[10] += delta;
-  return budget(v, linkOptions(s)).margin;
+  const v = valuesAt(s, change, km, { strict: true });
+  return v ? budget(v, linkOptions(s)).margin - (noiseRise ? noiseRise(change) : 0) : NaN;
 }
 
 // ---------------------------------------------------------------- Margin versus elevation
 
 let passCursor = null;
 
-export function showPass(s) {
+/**
+ * Draws the pass curve. rise(change), when given, is how much the noise floor rises with the changed
+ * inputs: an antenna that sees more atmosphere, at a low elevation or in rain, picks up more noise,
+ * which matters when the sensitivity comes from the noise floor.
+ */
+export function showPass(s, rise = null) {
+  noiseRise = rise;
   const box = $('pass-chart');
   const orbit = s.orbit;
   $('pass-body').hidden = !orbit;
@@ -113,7 +115,8 @@ function outage(p) {
   return minutes < 120 ? t('{minutes} min a year', { minutes: fmt(minutes, 1) }) : t('{hours} h a year', { hours: fmt(minutes / 60, 1) });
 }
 
-export function showAvailability(s) {
+export function showAvailability(s, rise = null) {
+  noiseRise = rise;
   const items = s.atmosphereEstimate?.items ?? {};
   const timed = TIME_ITEMS.filter((key) => items[key] && !items[key].none);
   $('availability-body').hidden = !timed.length;

@@ -5,7 +5,6 @@ import {
   number,
   invalidIndex,
   budget,
-  powerAt,
   noise,
   cascadeNF,
   dataLink,
@@ -19,6 +18,7 @@ import {
   $,
   esc,
   fmt,
+  fmtDistance,
   fmtRate,
   notice,
   read,
@@ -32,6 +32,7 @@ import {
   resetControls,
 } from './ui.mjs';
 import { distanceChart } from './chart.mjs';
+import { maxDistance, enteredValues } from './link-model.mjs';
 import { reportHtml, inputRows, linkOptions, eirpCheck, eirpWarning, STALE_ESTIMATE } from './report.mjs';
 import { initMeasurements, showMeasurements, chartMeasurements } from './measurements.mjs';
 import {
@@ -41,6 +42,8 @@ import {
   refreshEstimates,
   surfaceTemperature,
   sharedElevation,
+  terrestrialGeometry,
+  reestimate,
   typedItems,
   restoreTypedItems,
   conditionIds,
@@ -61,6 +64,7 @@ import { attachHelp } from './help.mjs';
 import { initSlant, currentOrbit, SLANT_IDS, orbitRecord, setOrbitRecord } from './slant.mjs';
 import { initPass, showPass, showAvailability } from './pass.mjs';
 import { skyTemperature, groundShare } from './satellite.mjs';
+import { radioHorizon } from './terrain.mjs';
 import { noisePower } from './signals.mjs';
 import { t, locale } from './i18n.mjs';
 
@@ -473,9 +477,13 @@ function resultHtml(r) {
           [t('SNR margin'), n.margin, 'dB'],
         ]
       : []),
-    [t('Maximum distance'), r.maxDistance, 'km'],
+    [t('Maximum distance'), maxDistance(snapshot), 'distance'],
   ]
-    .map(([l, v, u]) => `<div><small>${l}</small><strong>${fmt(v)} ${u}</strong></div>`)
+    .map(([l, v, u]) => {
+      // The maximum distance is null when the required margin is met at no distance in the far field.
+      const shown = u === 'distance' ? (v === null ? t('Not reached') : fmtDistance(v, 2)) : `${fmt(v)} ${u}`;
+      return `<div><small>${l}</small><strong>${shown}</strong></div>`;
+    })
     .join('');
   const sensitivity = snapshot.sensitivityFromSnr
     ? `<br><small>${t('Sensitivity {value} dBm, from the noise floor and the required SNR', { value: fmt(snapshot.values[8]) })}</small>`
@@ -497,7 +505,7 @@ function resultHtml(r) {
 /** Warnings shown with the result: implausible inputs, EIRP over its limit and the near field. */
 function warnings(r, n) {
   // A sensitivity derived from the noise settings is not the user's typo, so it is not checked.
-  const checked = [...snapshot.values];
+  const checked = enteredValues(snapshot);
   if (snapshot.sensitivityFromSnr) checked[8] = -100;
   const list = inputWarnings(checked);
   // With an entered sensitivity, say when the noise floor tells a different story.
@@ -516,18 +524,64 @@ function warnings(r, n) {
   const eirp = eirpCheck(snapshot, r);
   if (eirp?.exceeded) list.push(eirpWarning(eirp));
   if (snapshot.atmosphereStale) list.push(STALE_ESTIMATE);
+  const horizon = horizonWarning(snapshot.values[1], maxDistance(snapshot));
+  if (horizon) list.push(horizon);
   const limit = `${fmt(r.farFieldMin * 1000, 3)} m`;
-  if (r.nearField) {
+  if (r.nearField && r.farFieldAntenna) {
+    list.push(
+      t('Near field of the {gain} dBi antenna: about {diameter} m across, its far field starts at 2D²/λ = {limit}. Free-space loss does not apply closer, so these results are unreliable.', {
+        gain: fmt(r.farFieldAntenna.gain),
+        diameter: fmt(r.farFieldAntenna.diameter * 1000, 3),
+        limit,
+      }),
+    );
+  } else if (r.nearField) {
     list.push(
       t(
         'Near field: the distance is under 10 wavelengths ({limit}). Free-space loss does not apply here, so these results are unreliable.',
         { limit },
       ),
     );
-  } else if (r.maxDistance !== null && r.maxDistance < r.farFieldMin) {
-    list.push(t('Maximum distance is under 10 wavelengths ({limit}), in the near field, so it is unreliable.', { limit }));
   }
   return list;
+}
+
+// Longer terrestrial paths than this get a reminder to check the radio horizon when the antenna
+// altitudes are not given: two 10 m masts see each other up to 26 km.
+const HORIZON_REMINDER_KM = 30;
+
+/**
+ * On a terrestrial path, a warning when the distance d or the maximum distance farthest (km) lies
+ * beyond the radio horizon of the antennas, from their altitudes under the shared conditions over the
+ * mean terrain (or sea level), or a reminder to enter them for a long path. Null when there is
+ * nothing to say.
+ */
+function horizonWarning(d, farthest) {
+  const geo = terrestrialGeometry();
+  if (!geo) return null;
+  if (geo.tx === null || geo.rx === null) {
+    const longest = Math.max(d, farthest ?? 0);
+    return longest > HORIZON_REMINDER_KM
+      ? t('This terrestrial link or its maximum distance reaches {distance} km. Paths beyond about 30 km need tall antennas to stay within the radio horizon, about 4.12 (√h₁ + √h₂) km with the heights in m: two 10 m masts reach 26 km. Enter the TX and RX antenna altitudes under the shared conditions to check it.', { distance: fmt(longest, 1) })
+      : null;
+  }
+  const ground = geo.ground ?? 0;
+  const k = geo.k > 0 ? geo.k : 4 / 3;
+  const [h1, h2] = [geo.tx - ground, geo.rx - ground].map((h) => Math.max(h, 0));
+  const reach = radioHorizon(h1, h2, k);
+  if (d <= reach) {
+    return farthest > reach
+      ? t('The maximum distance of {max} km lies beyond the radio horizon of these antennas ({horizon} km); beyond the horizon the Earth itself blocks the path.', { max: fmt(farthest, 1), horizon: fmt(reach, 1) })
+      : null;
+  }
+  return t('Beyond the radio horizon: antennas {h1} m and {h2} m above {reference} see each other only up to {horizon} km (k = {k}), so the Earth itself blocks this {distance} km path and free-space loss does not apply.', {
+    h1: fmt(h1, 1),
+    h2: fmt(h2, 1),
+    reference: geo.ground === null ? t('sea level') : t('the mean terrain altitude'),
+    horizon: fmt(reach, 1),
+    k: fmt(k, 3),
+    distance: fmt(d, 4),
+  });
 }
 
 function breakdownHtml(r) {
@@ -554,10 +608,36 @@ function showSnapshot() {
   $('snapshot-inputs').innerHTML = table([t('Parameter'), t('Value')], inputRows(snapshot));
   showMeasurements(snapshot);
   drawChart(true);
-  showPass(snapshot);
-  showAvailability(snapshot);
+  const rise = skyNoiseRise();
+  showPass(snapshot, rise);
+  showAvailability(snapshot, rise);
   followSky();
   updateAnalysis();
+}
+
+/**
+ * For the pass and availability curves: how much the noise floor rises (dB) when the inputs change,
+ * while the sensitivity comes from the noise floor and the antenna temperature from the sky estimator
+ * with the path's atmospheric and cloud loss. The sky noise then follows the recalculated loss, the
+ * ground pickup and the receiver's own noise staying as they are. Null when that does not hold.
+ */
+function skyNoiseRise() {
+  if (!snapshot.sensitivityFromSnr) return null;
+  if (sky.temp === null || $('antenna-temp').value !== sky.temp) return null;
+  if (sky.atten === null || $('sky-atten').value !== sky.atten) return null;
+  const n = noiseFor(snapshot.values);
+  const tmr = number($('sky-tmr').value);
+  const ground = number($('sky-ground').value);
+  if (!n || !(tmr > 0) || !(ground >= 0)) return null;
+  const receiver = n.tsys - number(sky.temp);
+  const items = lossItemsOf(snapshot);
+  const fixed = { atmospheric: number(items.atmospheric), cloud: number(items.cloud) };
+  const estimate = snapshot.atmosphereEstimate;
+  return (change) => {
+    const now = reestimate(estimate, change);
+    const loss = ['atmospheric', 'cloud'].reduce((sum, key) => sum + (now[key] ?? fixed[key]), 0);
+    return 10 * Math.log10((skyTemperature(loss, tmr) + ground + receiver) / n.tsys);
+  };
 }
 
 /**
@@ -711,10 +791,12 @@ let chartCursorAt = null;
 /** Redraws the chart; the slider returns to the link distance only when resetSlider is true. */
 function drawChart(resetSlider) {
   const measured = chartMeasurements(snapshot);
-  const { svg, lo, hi, center, maxDistance, cursorAt } = distanceChart(snapshot.values, measured);
+  const { svg, lo, hi, center, maxDistance: farthest, cursorAt } = distanceChart(snapshot, measured);
   chartCursorAt = cursorAt;
   $('chart').innerHTML = svg;
-  $('max-distance').textContent = t('Maximum distance {distance} km', { distance: fmt(maxDistance, 5) });
+  $('max-distance').textContent = t('Maximum distance {distance}', {
+    distance: farthest === null ? t('Not reached') : fmtDistance(farthest, 5),
+  });
   $('legend-measured').hidden = !measured.points.length;
   $('legend-fit').hidden = !measured.fit;
   if (measured.fit) $('legend-fit').textContent = t('╌ Fitted, n = {n}', { n: fmt(measured.fit.n, 2) });
@@ -730,7 +812,7 @@ function inspectDistance() {
   if (!snapshot) return;
   const log = number($('distance-slider').value);
   const d = 10 ** log;
-  const { x, y } = chartCursorAt(log);
+  const { x, y, power } = chartCursorAt(log);
   const cursor = $('chart-cursor');
   cursor.querySelector('line').setAttribute('x1', x);
   cursor.querySelector('line').setAttribute('x2', x);
@@ -738,7 +820,7 @@ function inspectDistance() {
   cursor.querySelector('circle').setAttribute('cy', y);
   const near = d < budget(snapshot.values).farFieldMin ? ' ' + t('(near field, unreliable)') : '';
   $('distance-readout').textContent =
-    t('Distance {distance} km → receiver input {power} dBm', { distance: fmt(d, 6), power: fmt(powerAt(snapshot.values, d)) }) +
+    t('Distance {distance} → receiver input {power} dBm', { distance: fmtDistance(d, 6), power: fmt(power) }) +
     near;
 }
 
