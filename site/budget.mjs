@@ -165,7 +165,7 @@ function readMeta() {
  */
 function noiseSettings(v) {
   const nf = $('nf-from-parts').checked
-    ? cascadeNF(v[7], v[5], number($('amp-nf').value), number($('rx-nf').value), $('amp-position').value === 'before')
+    ? partsNF(v, $('amp-nf').value, $('rx-nf').value, $('amp-position').value === 'before')
     : number($('noiseFigure').value);
   const raw = $('antenna-temp').value.trim();
   return {
@@ -419,6 +419,7 @@ function clearForm() {
     carried: snapshot ? Object.fromEntries(CARRIED.map((key) => [key, structuredClone(snapshot[key])])) : carried,
   };
   resetControls(ownIds());
+  showNoiseParts();
   resetConditions();
   resetControls(calculatorIds());
   syncCalculators();
@@ -441,6 +442,7 @@ function clearForm() {
 function undoClear() {
   if (!undo) return;
   setFormState(undo.controls);
+  showNoiseParts();
   syncConditions(undo.percent);
   syncCalculators();
   setOrbitRecord(undo.orbit);
@@ -584,17 +586,30 @@ function syncMeta() {
 }
 
 /** In component mode, derives the total NF from the RX cable, amplifier and receiver. */
-function updateNoiseFigure() {
-  const fromParts = snapshot.nfFromParts;
+/** Shows the amplifier and receiver NF fields, and locks the total NF, while it comes from the parts. */
+function showNoiseParts() {
+  const fromParts = $('nf-from-parts').checked;
   $('amp-nf').closest('label').hidden = !fromParts;
   $('rx-nf').closest('label').hidden = !fromParts;
   $('noiseFigure').readOnly = fromParts;
-  if (!fromParts) return true;
+}
+
+function updateNoiseFigure() {
+  showNoiseParts();
+  if (!snapshot.nfFromParts) return true;
   const v = snapshot.values;
-  const nf = cascadeNF(v[7], v[5], number(snapshot.ampNF), number(snapshot.rxNF), linkOptions(snapshot).ampFirst);
+  const nf = partsNF(v, snapshot.ampNF, snapshot.rxNF, linkOptions(snapshot).ampFirst);
   snapshot.noiseFigure = nf === null ? '' : String(Number(nf.toFixed(4)));
   $('noiseFigure').value = snapshot.noiseFigure;
   return nf !== null;
+}
+
+/**
+ * System NF from the RX cable (v[7]), amplifier gain (v[5]) and the amplifier and receiver NFs. The
+ * form asks for 0 dB gain when there is no amplifier, so its NF does not count then.
+ */
+function partsNF(v, ampNF, rxNF, ampFirst) {
+  return cascadeNF(v[7], v[5], v[5] === 0 ? 0 : number(ampNF), number(rxNF), ampFirst);
 }
 
 /** Antenna noise temperature in K; blank means the 290 K reference. NaN when invalid. */
@@ -859,14 +874,14 @@ function buildAnalysisFields() {
     ['bandwidth', t('Bandwidth B'), '1', '', example(1)],
     ['requiredSNR', t('Required SNR'), '10', 'dB', '', true],
     ['antenna-temp', t('Antenna noise temperature T<sub>a</sub> (optional)'), '', 'K', 'placeholder="290"'],
-    ['amp-nf', t('RX amplifier noise figure'), '', 'dB', example(1)],
-    ['rx-nf', t('Receiver noise figure'), '', 'dB', example(6)],
+    ['amp-nf', t('RX amplifier noise figure'), '1', 'dB', example(1)],
+    ['rx-nf', t('Receiver noise figure'), '3', 'dB', example(6)],
     ['noiseFigure', t('Total system noise figure NF'), '3', 'dB'],
   ];
   $('noise-fields').insertAdjacentHTML(
     'beforeend',
     noiseFields.slice(0, 3).map((f) => field(...f)).join('') +
-      '<label class="span"><input type="checkbox" id="nf-from-parts"> ' +
+      '<label class="span"><input type="checkbox" id="nf-from-parts" checked> ' +
       `${t('Calculate total NF from the RX cable loss, amplifier and receiver')}</label>` +
       noiseFields.slice(3).map((f) => field(...f)).join(''),
   );
@@ -1020,7 +1035,9 @@ export function initBudget({ addPlan }) {
 
   buildAnalysisFields();
   for (const [id] of META) if (typeof saved[id] === 'string') $(id).value = saved[id];
-  if (typeof saved['nf-from-parts'] === 'boolean') $('nf-from-parts').checked = saved['nf-from-parts'];
+  const partsUnused = !saved['nf-from-parts'] && !saved['amp-nf'] && !saved['rx-nf'];
+  if (typeof saved['nf-from-parts'] === 'boolean' && !partsUnused) $('nf-from-parts').checked = saved['nf-from-parts'];
+  if (partsUnused) resetControls(['amp-nf', 'rx-nf']);
   attachHelp();
   initPass();
   const analysisChanged = () => {
@@ -1030,7 +1047,11 @@ export function initBudget({ addPlan }) {
   unitResets.push(bindUnit('bandwidth-unit', 'bandwidth', analysisChanged));
   unitResets.push(bindUnit('data-rate-unit', 'data-rate', analysisChanged));
   for (const [id] of META) $(id).oninput = analysisChanged;
-  $('nf-from-parts').onchange = analysisChanged;
+  $('nf-from-parts').onchange = () => {
+    showNoiseParts();
+    analysisChanged();
+  };
+  showNoiseParts();
   initMeasurements(() => drawChart(false));
 
   $('distance-slider').oninput = inspectDistance;
