@@ -623,19 +623,22 @@ function updateAnalysis() {
     number(snapshot.requiredSNR),
     antennaTemp(),
   );
+  // Each row's formula, rendered into the hidden #noise-eqs by tools/render_formulas.py.
+  const eq = (key) => $('noise-eqs').querySelector(`[data-eq="${key}"]`).innerHTML;
   $('noise-results').innerHTML = n
     ? table(
-        [t('Item'), t('Result')],
+        [t('Item'), t('Result'), t('Formula')],
         [
-          [t('System noise temperature'), `${fmt(n.tsys, 1)} K`],
+          [t('System noise temperature'), `${fmt(n.tsys, 1)} K`, eq('tsys')],
           [
             t('Antenna noise kTₐB'),
             antennaTemp() > 0 ? `${fmt(noisePower(antennaTemp(), bandwidth))} dBm (${fmt(antennaTemp(), 1)} K)` : '—',
+            eq('antenna'),
           ],
-          [t('Input-referred noise'), fmt(n.floor) + ' dBm'],
-          [t('Estimated SNR'), fmt(n.snr) + ' dB'],
-          [t('SNR margin'), fmt(n.margin) + ' dB'],
-          [t('Verdict'), n.margin >= 0 ? t('SNR target met') : t('SNR target not met')],
+          [t('Input-referred noise'), fmt(n.floor) + ' dBm', eq('floor')],
+          [t('Estimated SNR'), fmt(n.snr) + ' dB', eq('snr')],
+          [t('SNR margin'), fmt(n.margin) + ' dB', eq('margin')],
+          [t('Verdict'), n.margin >= 0 ? t('SNR target met') : t('SNR target not met'), eq('verdict')],
           [
             t('Equivalent receiver sensitivity'),
             snapshot.sensitivityFromSnr
@@ -645,9 +648,11 @@ function updateAnalysis() {
                   entered: fmt(v[8]),
                   difference: fmt(v[8] - n.sensitivity),
                 }),
+            eq('sensitivity'),
           ],
-          [t('Receive G/T'), `${fmt(n.gOverT)} dB/K`],
+          [t('Receive G/T'), `${fmt(n.gOverT)} dB/K`, eq('gt')],
         ],
+        { raw: [2] },
       )
     : `<p class="error">${noiseError(partsValid)}</p>`;
   $('data-results').innerHTML = dataLinkHtml();
@@ -851,12 +856,12 @@ function buildForm() {
 function buildAnalysisFields() {
   const example = (value) => `placeholder="${t('e.g. {value}', { value })}"`;
   const noiseFields = [
-    ['bandwidth', t('Bandwidth'), '1', '', example(1)],
+    ['bandwidth', t('Bandwidth B'), '1', '', example(1)],
     ['requiredSNR', t('Required SNR'), '10', 'dB', '', true],
-    ['antenna-temp', t('Antenna noise temperature (optional)'), '', 'K', 'placeholder="290"'],
+    ['antenna-temp', t('Antenna noise temperature T<sub>a</sub> (optional)'), '', 'K', 'placeholder="290"'],
     ['amp-nf', t('RX amplifier noise figure'), '', 'dB', example(1)],
     ['rx-nf', t('Receiver noise figure'), '', 'dB', example(6)],
-    ['noiseFigure', t('Total system noise figure'), '3', 'dB'],
+    ['noiseFigure', t('Total system noise figure NF'), '3', 'dB'],
   ];
   $('noise-fields').insertAdjacentHTML(
     'beforeend',

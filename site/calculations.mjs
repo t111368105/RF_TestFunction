@@ -67,12 +67,14 @@ export function budget(v, { ampFirst = false } = {}) {
   const received = p - tl + tg + r - fspl - o;
   const output = received - rl + a;
   const margin = output - s;
+  // Computed values in the descriptions to 0.01 dB; entered ones are shown as typed.
+  const dB = (x) => Number(x.toFixed(2));
   const stages = [
     [t('Transmitter output'), t('Initial TX power'), p],
     [t('TX antenna input'), t('TX cable loss −{value} dB', { value: tl }), p - tl],
     [t('EIRP'), t('TX antenna gain {value} dB', { value: tg }), p - tl + tg],
-    [t('After free-space loss'), t('FSPL −{value} dB', { value: fspl }), p - tl + tg - fspl],
-    [t('After additional path losses'), t('Path losses −{value} dB', { value: o }), p - tl + tg - fspl - o],
+    [t('After free-space loss'), t('FSPL −{value} dB', { value: dB(fspl) }), p - tl + tg - fspl],
+    [t('After additional path losses'), t('Path losses −{value} dB', { value: dB(o) }), p - tl + tg - fspl - o],
     [t('RX antenna output'), t('RX antenna gain {value} dB', { value: r }), received],
     ampFirst
       ? [t('RX amplifier output'), t('Amplifier gain {value} dB', { value: a }), received + a]

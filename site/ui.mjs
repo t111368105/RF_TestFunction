@@ -91,11 +91,12 @@ export function initSignButtons() {
   });
 }
 
-export function table(head, rows) {
-  // Cells are escaped, except <sub> and <sup> so symbols such as T<sub>sys</sub> keep their subscripts.
+export function table(head, rows, { raw = [] } = {}) {
+  // Cells are escaped, except <sub> and <sup> so symbols such as T<sub>sys</sub> keep their subscripts;
+  // the columns listed in raw hold trusted markup, such as MathML formulas, and are inserted as is.
   const cell = (x) => esc(x).replace(/&lt;(\/?)(sub|sup)&gt;/g, '<$1$2>');
   const th = head.map((x) => `<th>${cell(x)}</th>`).join('');
-  const tr = rows.map((row) => `<tr>${row.map((x) => `<td>${cell(x)}</td>`).join('')}</tr>`).join('');
+  const tr = rows.map((row) => `<tr>${row.map((x, k) => `<td>${raw.includes(k) ? x : cell(x)}</td>`).join('')}</tr>`).join('');
   return `<div class="table-wrap"><table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table></div>`;
 }
 

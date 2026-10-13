@@ -1020,3 +1020,15 @@ footer span {
 .chart svg.wide {
   min-width: 540px;
 }
+
+/* Formulas beside their results in a table: left-aligned and compact. */
+td .eq math {
+  min-width: 0;
+  margin: 2px 0;
+  font-size: 1em;
+}
+
+#noise-results td:first-child,
+#noise-results td:nth-child(2) {
+  min-width: 7.5em;
+}
